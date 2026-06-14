@@ -11,6 +11,7 @@
 import { createReadStream, mkdirSync, writeFileSync, existsSync, unlinkSync } from 'fs';
 import { createInterface } from 'readline';
 import { execSync } from 'child_process';
+import { setTimeout as sleep } from 'timers/promises';
 import { join } from 'path';
 import { normalizeOdaCsvRow } from '../src/oda-normalize';
 import { getOdaBaseSchemaSql } from '../src/oda-schema';
@@ -34,6 +35,7 @@ interface ImportOptions {
   outputDir: string;
   skipSchema: boolean;
   maxRows?: number;
+  resume: boolean;
 }
 
 function parseArgs(argv: string[]): ImportOptions {
@@ -45,6 +47,7 @@ function parseArgs(argv: string[]): ImportOptions {
     batchSize: ODA_DEFAULTS.IMPORT_BATCH_SIZE,
     outputDir: '.oda-import',
     skipSchema: false,
+    resume: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -67,6 +70,8 @@ function parseArgs(argv: string[]): ImportOptions {
       options.skipSchema = true;
     } else if (arg === '--max-rows' && argv[i + 1]) {
       options.maxRows = parseInt(argv[++i], 10);
+    } else if (arg === '--resume') {
+      options.resume = true;
     }
   }
 
@@ -126,32 +131,69 @@ async function* streamCsvRows(
   }
 }
 
-function executeSqlFile(database: string, remote: boolean, filePath: string): void {
+async function executeSqlFile(
+  database: string,
+  remote: boolean,
+  filePath: string,
+  maxAttempts = 5
+): Promise<void> {
   const remoteFlag = remote ? '--remote' : '--local';
-  execSync(`npx wrangler d1 execute ${database} ${remoteFlag} --file=${filePath}`, {
-    stdio: 'inherit',
-  });
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      execSync(`npx wrangler d1 execute ${database} ${remoteFlag} --file=${filePath}`, {
+        stdio: 'inherit',
+      });
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      const delayMs = Math.min(1000 * 2 ** attempt, 30_000);
+      console.warn(`Batch upload failed (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms...`);
+      await sleep(delayMs);
+    }
+  }
 }
 
-function writeAndExecuteBatch(
+async function writeAndExecuteBatch(
   database: string,
   remote: boolean,
   statements: string[],
   filePath: string
-): void {
+): Promise<void> {
   if (statements.length === 0) return;
   writeFileSync(filePath, statements.join('\n'));
-  executeSqlFile(database, remote, filePath);
+  await executeSqlFile(database, remote, filePath);
   unlinkSync(filePath);
 }
 
-function queryNextAddressId(database: string, remote: boolean): number {
+function queryD1Json<T>(
+  database: string,
+  remote: boolean,
+  command: string
+): Array<{ results?: T[] }> {
   const remoteFlag = remote ? '--remote' : '--local';
   const output = execSync(
-    `npx wrangler d1 execute ${database} ${remoteFlag} --command "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM oda_addresses;" --json`,
+    `npx wrangler d1 execute ${database} ${remoteFlag} --command ${JSON.stringify(command)} --json`,
     { encoding: 'utf-8' }
   );
-  const parsed = JSON.parse(output) as Array<{ results?: Array<{ next_id?: number }> }>;
+  return JSON.parse(output) as Array<{ results?: T[] }>;
+}
+
+function queryProvinceRowCount(database: string, remote: boolean, province: string): number {
+  const parsed = queryD1Json<{ cnt: number }>(
+    database,
+    remote,
+    `SELECT COUNT(*) AS cnt FROM oda_addresses WHERE province = '${province}';`
+  );
+  const cnt = parsed[0]?.results?.[0]?.cnt;
+  return typeof cnt === 'number' ? cnt : 0;
+}
+
+function queryNextAddressId(database: string, remote: boolean): number {
+  const parsed = queryD1Json<{ next_id: number }>(
+    database,
+    remote,
+    'SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM oda_addresses;'
+  );
   const nextId = parsed[0]?.results?.[0]?.next_id;
   if (typeof nextId !== 'number' || nextId < 1) {
     return 1;
@@ -159,12 +201,12 @@ function queryNextAddressId(database: string, remote: boolean): number {
   return nextId;
 }
 
-function initializeSchema(options: ImportOptions): void {
+async function initializeSchema(options: ImportOptions): Promise<void> {
   mkdirSync(options.outputDir, { recursive: true });
   const schemaPath = join(options.outputDir, 'schema.sql');
   writeFileSync(schemaPath, getOdaBaseSchemaSql().join(';\n') + ';\n');
   console.log(`Initializing ODA tables (${options.remote ? 'remote' : 'local'})...`);
-  executeSqlFile(options.database, options.remote, schemaPath);
+  await executeSqlFile(options.database, options.remote, schemaPath);
 }
 
 function buildProvinceDeleteSql(province: string): string[] {
@@ -241,7 +283,7 @@ async function flushCentroids(
     chunk.push(statement);
     if (chunk.length >= options.batchSize) {
       const filePath = join(options.outputDir, `${province}-centroids-${index}.sql`);
-      writeAndExecuteBatch(options.database, options.remote, chunk, filePath);
+      await writeAndExecuteBatch(options.database, options.remote, chunk, filePath);
       chunk = [];
       index++;
     }
@@ -249,7 +291,7 @@ async function flushCentroids(
 
   if (chunk.length > 0) {
     const filePath = join(options.outputDir, `${province}-centroids-${index}.sql`);
-    writeAndExecuteBatch(options.database, options.remote, chunk, filePath);
+    await writeAndExecuteBatch(options.database, options.remote, chunk, filePath);
     index++;
   }
 
@@ -268,7 +310,11 @@ async function importProvinceFromFile(
   const cityCentroids = new Map<string, CentroidAccumulator & { city: string }>();
   const streetRanges = new Map<string, CentroidAccumulator & { streetKey: string; cityKey: string }>();
 
-  let batch: string[] = buildProvinceDeleteSql(province);
+  const skipRows =
+    options.resume ? queryProvinceRowCount(options.database, options.remote, province) : 0;
+  let rowsToSkip = skipRows;
+
+  let batch: string[] = options.resume ? [] : buildProvinceDeleteSql(province);
   let rowId = startId;
   let imported = 0;
   let skipped = 0;
@@ -276,11 +322,19 @@ async function importProvinceFromFile(
   const progressEvery = 100_000;
 
   console.log(`Importing ${province} from ${csvPath}...`);
+  if (options.resume && skipRows > 0) {
+    console.log(`  Resuming: skipping first ${skipRows.toLocaleString()} ${province} rows already in D1`);
+  }
 
   for await (const csvRow of streamCsvRows(csvPath, options.maxRows)) {
     const normalized = normalizeOdaCsvRow(csvRow);
     if (!normalized || normalized.province !== province) {
       skipped++;
+      continue;
+    }
+
+    if (rowsToSkip > 0) {
+      rowsToSkip--;
       continue;
     }
 
@@ -292,7 +346,7 @@ async function importProvinceFromFile(
 
     if (batch.length >= options.batchSize) {
       const filePath = join(options.outputDir, `${province}-addresses-${batchIndex}.sql`);
-      writeAndExecuteBatch(options.database, options.remote, batch, filePath);
+      await writeAndExecuteBatch(options.database, options.remote, batch, filePath);
       batch = [];
       batchIndex++;
     }
@@ -309,7 +363,7 @@ async function importProvinceFromFile(
 
   if (batch.length > 0) {
     const filePath = join(options.outputDir, `${province}-addresses-${batchIndex}.sql`);
-    writeAndExecuteBatch(options.database, options.remote, batch, filePath);
+    await writeAndExecuteBatch(options.database, options.remote, batch, filePath);
     batchIndex++;
   }
 
@@ -323,11 +377,11 @@ async function importProvinceFromFile(
   );
 
   const metadataPath = join(options.outputDir, `${province}-metadata.sql`);
-  writeAndExecuteBatch(
+  await writeAndExecuteBatch(
     options.database,
     options.remote,
     [
-      `INSERT INTO oda_imports (province, source_url, source_version, row_count, finished_at) VALUES ('${province}', '${PROVINCE_DOWNLOAD_URLS[province] || ''}', '${ODA_DEFAULTS.DATA_VERSION}', ${imported}, datetime('now'));`,
+      `INSERT INTO oda_imports (province, source_url, source_version, row_count, finished_at) VALUES ('${province}', '${PROVINCE_DOWNLOAD_URLS[province] || ''}', '${ODA_DEFAULTS.DATA_VERSION}', ${imported + skipRows}, datetime('now'));`,
     ],
     metadataPath
   );
@@ -347,7 +401,7 @@ async function main(): Promise<void> {
   }
 
   if (!options.skipSchema) {
-    initializeSchema(options);
+    await initializeSchema(options);
   }
 
   let nextId = queryNextAddressId(options.database, options.remote);
