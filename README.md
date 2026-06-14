@@ -173,7 +173,7 @@ Event-driven notifications for batch completion:
 #### Documentation
 Interactive API documentation:
 
-- `GET /` — Interactive landing page with API explorer
+- `GET /` — Landing page with live lookup try-it widget
 - `GET /docs` — OpenAPI reference powered by [Scalar](https://scalar.com)
 - `GET /swagger` — Alias of `/docs`
 - `GET /api/docs` — OpenAPI specification (JSON)

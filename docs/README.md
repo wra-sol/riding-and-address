@@ -31,7 +31,7 @@ When the worker is running locally or deployed:
 
 | URL | Description |
 |-----|-------------|
-| `/` | Landing page with examples |
+| `/` | Landing page with live lookup try-it widget |
 | `/docs` | Interactive OpenAPI reference ([Scalar](https://scalar.com)) |
 | `/swagger` | Alias of `/docs` |
 | `/api/docs` | OpenAPI 3.0 JSON spec |
