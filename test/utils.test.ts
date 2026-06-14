@@ -349,6 +349,25 @@ describe('validateAndSanitizeQuery include_province', () => {
     expect(result.valid).toBe(true);
     expect(result.sanitized?.returnFields).toEqual([]);
   });
+
+  it('does not default province on combined when return selector is present', () => {
+    const result = validateAndSanitizeQuery(
+      { postal: 'M5V 2T6', return: 'municipality' },
+      '/api/combined'
+    );
+    expect(result.valid).toBe(true);
+    expect(result.sanitized?.returnFields).toEqual(['municipality']);
+    expect(result.sanitized?.includeProvince).toBe(false);
+  });
+
+  it('honors explicit include_province when return selector is present', () => {
+    const result = validateAndSanitizeQuery(
+      { postal: 'M5V 2T6', return: 'municipality', include_province: 'true' },
+      '/api/combined'
+    );
+    expect(result.valid).toBe(true);
+    expect(result.sanitized?.includeProvince).toBe(true);
+  });
 });
 
 describe('checkBasicAuth', () => {

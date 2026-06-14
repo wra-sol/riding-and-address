@@ -73,6 +73,26 @@ describe('lookup API integration (PR manual test plan)', () => {
     expect(body.properties?.ED_NAMEE).toBe('Spadina—Harbourfront');
   });
 
+  it('does not include province_data when return=municipality filters combined defaults', async () => {
+    const env = createLookupTestEnv();
+    const response = await fetchLookup(
+      env,
+      `/api/combined?lat=${TORONTO_LAT}&lon=${TORONTO_LON}&return=municipality&city=Toronto`
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      municipality?: string;
+      province_data?: { riding: string } | null;
+      query: { includeProvince?: boolean; returnFields?: string[] };
+    };
+
+    expect(body.query.returnFields).toEqual(['municipality']);
+    expect(body.query.includeProvince).toBe(false);
+    expect(body.municipality).toBe('Toronto');
+    expect(body.province_data).toBeUndefined();
+  });
+
   it('POST /batch supports include_province and return fields', async () => {
     const env = createLookupTestEnv();
     const response = await fetchLookup(env, '/batch', {
@@ -117,11 +137,11 @@ describe('lookup API integration (PR manual test plan)', () => {
     expect(body.results).toHaveLength(2);
 
     const combined = body.results.find((r) => r.id === 'combined-municipality');
-    expect(combined?.query.includeProvince).toBe(true);
+    expect(combined?.query.includeProvince).toBe(false);
     expect(combined?.query.returnFields).toEqual(['municipality']);
     expect(combined?.municipality).toBe('Toronto');
     expect(combined?.properties?.MUNICIPALITY).toBe('Toronto');
-    expect(combined?.province_data?.riding).toBe('Toronto Centre');
+    expect(combined?.province_data).toBeUndefined();
 
     const federal = body.results.find((r) => r.id === 'federal-province');
     expect(federal?.query.includeProvince).toBe(true);

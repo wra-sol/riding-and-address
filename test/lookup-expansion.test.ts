@@ -110,4 +110,26 @@ describe('buildExpandedLookupPayload', () => {
 
     expect(payload.province_data).toBeUndefined();
   });
+
+  it('does not include normalizedAddress unless requested via return selector', () => {
+    const payload = buildExpandedLookupPayload(
+      {
+        properties: { FED_NUM: '35075' },
+        riding: 'Toronto Centre',
+        normalizedAddress: '123 Main St, Toronto, ON',
+        addressComponents: { locality: 'Toronto' },
+      },
+      [],
+      '/api/federal',
+      {
+        addressContext: {
+          normalizedAddress: '456 Other St, Toronto, ON',
+          addressComponents: { locality: 'Toronto' },
+        },
+      }
+    );
+
+    expect(payload.normalizedAddress).toBeUndefined();
+    expect(payload.addressComponents).toBeUndefined();
+  });
 });

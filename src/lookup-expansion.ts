@@ -255,15 +255,6 @@ export function buildExpandedLookupPayload(
     payload.municipality = municipality;
   }
 
-  const normalizedAddress = addressContext.normalizedAddress ?? base.normalizedAddress;
-  const addressComponents = addressContext.addressComponents ?? base.addressComponents;
-  if (normalizedAddress) {
-    payload.normalizedAddress = normalizedAddress;
-  }
-  if (addressComponents) {
-    payload.addressComponents = addressComponents;
-  }
-
   return payload;
 }
 

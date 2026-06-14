@@ -277,12 +277,18 @@ function enrichBatchLookupRequests(requests: BatchLookupRequest[]): BatchLookupR
       includeProvince = includeProvinceParse.value;
     }
 
+    const returnSelectorProvided = request.query.return !== undefined;
+
     return {
       ...request,
       query: {
         ...request.query,
         returnFields: returnFields ?? [],
-        includeProvince: resolveIncludeProvince(request.pathname, includeProvince),
+        includeProvince: resolveIncludeProvince(
+          request.pathname,
+          includeProvince,
+          returnSelectorProvided
+        ),
       },
     };
   });

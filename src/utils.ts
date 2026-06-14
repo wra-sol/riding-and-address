@@ -307,7 +307,11 @@ export function validateAndSanitizeQuery(query: QueryParams, pathname: string): 
   }
 
   sanitized.returnFields = sanitized.returnFields ?? [];
-  sanitized.includeProvince = resolveIncludeProvince(pathname, sanitized.includeProvince);
+  sanitized.includeProvince = resolveIncludeProvince(
+    pathname,
+    sanitized.includeProvince,
+    query.return !== undefined
+  );
   
   // Check that at least one location parameter is provided
   const hasLocation = sanitized.address || sanitized.postal || sanitized.city || 

@@ -109,7 +109,7 @@ Fixture CSV: `test/fixtures/oda/fixture.csv`
 - Federal riding in `properties`
 - `properties.MUNICIPALITY` set from ODA `mailingAddress.municipality` (e.g. `TORONTO`)
 - Top-level `municipality` matches `properties.MUNICIPALITY`
-- No `province_data` unless `include_province=true` is also requested
+- No `province_data` unless `include_province=true` is also requested (including on `/api/combined`, where `return=` disables the combined default)
 
 ## Case 12: OpenNorth parity — 757 Victoria Park
 

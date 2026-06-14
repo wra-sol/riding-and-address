@@ -34,21 +34,22 @@ Request provincial riding data without changing the base federal lookup:
 
 #### Optional `return` selector
 
-Request additional response metadata:
+Filter optional response fields (comma-separated). When `return` is present, endpoint defaults such as `/api/combined` provincial data are not applied unless also requested via `include_province=true`.
 
 | Token | Description |
 |-------|-------------|
-| `municipality` | Include `properties.MUNICIPALITY` when resolvable from ODA/Google address normalization |
+| `municipality` | Include `municipality` and `properties.MUNICIPALITY` when resolvable from ODA/Google address normalization |
 
 Examples:
 
-- `return=municipality`
-- `include_province=true&return=municipality`
+- `return=municipality` — municipality only (no implicit `province_data` on `/api/combined`)
+- `include_province=true&return=municipality` — both provincial data and municipality
 
 Rules:
 
 - Unknown `return` tokens return `400 INVALID_QUERY`.
 - Invalid `include_province` values return `400 INVALID_QUERY`.
+- Omitting `return` keeps endpoint defaults (e.g. `/api/combined` includes `province_data`).
 
 #### Examples:
 - `GET /api?lat=45.5017&lon=-73.5673`

@@ -86,7 +86,8 @@ export function createSwaggerUI(baseUrl: string): string {
 const RETURN_QUERY_PARAMETER = {
   name: "return",
   in: "query" as const,
-  description: "Optional comma-separated extra response fields. Supported: municipality.",
+  description:
+    "Optional comma-separated filter for expansion fields. Supported: municipality. When present, endpoint defaults (e.g. /api/combined province_data) are not applied unless include_province=true is also set.",
   required: false,
   schema: { type: "string", example: "municipality" },
 };

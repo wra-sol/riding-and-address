@@ -65,7 +65,7 @@ describe('safeParseBatchLookupRequests', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data[0].query.returnFields).toEqual(['municipality']);
-      expect(result.data[0].query.includeProvince).toBe(true);
+      expect(result.data[0].query.includeProvince).toBe(false);
     }
   });
 

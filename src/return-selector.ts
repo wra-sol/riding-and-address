@@ -95,13 +95,19 @@ export function parseIncludeProvince(raw: string | undefined): IncludeProvincePa
 /**
  * Resolves whether provincial data should be included for this request.
  * `/api/combined` defaults to true unless explicitly set to false.
+ * When a `return` selector is present, endpoint defaults are not applied —
+ * provincial data is included only when `include_province` is explicitly set.
  */
 export function resolveIncludeProvince(
   pathname: string,
-  includeProvince?: boolean
+  includeProvince?: boolean,
+  returnSelectorProvided = false
 ): boolean {
   if (includeProvince !== undefined) {
     return includeProvince;
+  }
+  if (returnSelectorProvided) {
+    return false;
   }
   return pathname === '/api/combined';
 }

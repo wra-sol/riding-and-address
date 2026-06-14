@@ -68,6 +68,14 @@ describe('resolveIncludeProvince', () => {
   it('honors explicit true on federal', () => {
     expect(resolveIncludeProvince('/api/federal', true)).toBe(true);
   });
+
+  it('does not apply combined default when return selector is present', () => {
+    expect(resolveIncludeProvince('/api/combined', undefined, true)).toBe(false);
+  });
+
+  it('honors explicit include_province when return selector is present', () => {
+    expect(resolveIncludeProvince('/api/combined', true, true)).toBe(true);
+  });
 });
 
 describe('resolveLookupPath', () => {
