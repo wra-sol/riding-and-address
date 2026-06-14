@@ -289,7 +289,7 @@ describe('Geocoding Module', () => {
 
 The project includes comprehensive API documentation generated from OpenAPI specifications:
 
-- **Interactive docs**: Available at `/docs` endpoint
+- **Interactive docs**: Scalar API reference at `/docs` (alias: `/swagger`)
 - **OpenAPI spec**: Generated in `docs.ts`
 - **Examples**: Include request/response examples
 

@@ -46,20 +46,19 @@ Rows without valid coordinates are skipped.
 ## Import pipeline
 
 ```bash
-# 1. Create D1 database
+# 1. Create D1 database (once)
 wrangler d1 create oda-addresses
 
-# 2. Add binding to wrangler.jsonc (see README)
+# 2. Add ODA_DB binding to wrangler.jsonc (see README)
 
 # 3. Initialize schema (via API or import script)
 curl -X POST https://your-worker.workers.dev/api/oda/init \
   -H "Authorization: Basic ..."
 
-# 4. Run import (download from StatCan or use a local CSV)
+# 4. Run import
 
-```bash
 # Download Ontario from StatCan and import to production D1
-CLOUDFLARE_ACCOUNT_ID=ad5ec479b9a421faa2ed06c3d1c2b23a \
+CLOUDFLARE_ACCOUNT_ID=your-account-id \
 npm run import:oda -- --download --provinces ON --remote --skip-schema
 
 # Fixture / local CSV
@@ -67,26 +66,44 @@ npm run import:oda -- --provinces ON,QC --file test/fixtures/oda/fixture.csv --r
 
 # Pilot import (first N rows only)
 npm run import:oda -- --download --provinces ON --remote --skip-schema --max-rows 10000
-```
+
+# Resume after interruption (skips rows already in D1 for each province)
+npm run import:oda -- --download --provinces ON --remote --skip-schema --resume
 
 # 5. Verify stats
-
-```bash
 curl https://your-worker.workers.dev/api/oda/stats \
   -H "Authorization: Basic ..."
 ```
 
-The import script (`scripts/import-oda.ts`):
+## Import script options
+
+`scripts/import-oda.ts` is invoked via `npm run import:oda -- [options]`.
+
+| Flag | Description |
+|------|-------------|
+| `--download` | Download and unzip province CSV from StatCan (`ODA_{PR}_v1.zip`) |
+| `--provinces ON,QC` | Provinces to import (default: `ON,QC`) |
+| `--file path.csv` | Local CSV instead of download |
+| `--remote` | Write to remote D1 (omit for `--local` dev database) |
+| `--local` | Implicit when `--remote` is omitted |
+| `--database name` | D1 database name (default: `oda-addresses`) |
+| `--skip-schema` | Skip table creation (use after `/api/oda/init` or first run) |
+| `--batch-size N` | Rows per D1 upload batch (default: 500) |
+| `--max-rows N` | Stop after N address rows (pilot imports) |
+| `--resume` | Skip rows already present in D1; does not delete existing province data |
+| `--output-dir dir` | Download/extract/SQL staging dir (default: `.oda-import`) |
+
+The import script:
 
 1. Downloads and unzips province CSV when `--download` is set (StatCan `ODA_{PR}_v1.zip`)
 2. Streams rows from CSV (supports `--max-rows` for pilots)
 3. Normalizes rows via `src/oda-normalize.ts` (fixture and StatCan column layouts)
 4. Builds Canada Post-style mailing fields
-5. Batch inserts into D1 (`--batch-size`, default 500)
+5. Batch inserts into D1 with retry on upload failures (`--batch-size`, default 500)
 6. Computes postal/city centroids and street ranges
 7. Records import metadata in `oda_imports`
 
-Ontario (`ODA_ON_v1.csv`) is ~690 MB uncompressed (~6M addresses). Full import takes several hours over `--remote`.
+Ontario (`ODA_ON_v1.csv`) is ~690 MB uncompressed (~6M addresses). Full import takes several hours over `--remote`. Use `--resume` if a long import is interrupted.
 
 ## D1 scale check
 
@@ -104,4 +121,6 @@ If D1 cannot hold the full address table:
 
 ## Re-import
 
-Re-running import for a province deletes existing rows for that province and re-imports. Import metadata is preserved in `oda_imports`.
+Without `--resume`, re-running import for a province deletes existing rows for that province and re-imports. Import metadata is preserved in `oda_imports`.
+
+With `--resume`, existing rows are kept and the CSV stream skips the number of rows already stored for that province.

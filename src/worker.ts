@@ -64,7 +64,7 @@ import {
 import { safeParseBatchLookupRequests } from './validation';
 import { QueueManagerDO } from './queue-manager';
 import { CircuitBreakerDO } from './circuit-breaker-do';
-import { createLandingPage, createSwaggerUI, createOpenAPISpec } from './docs';
+import { createLandingPage, createApiReference, createOpenAPISpec } from './docs';
 import { getTimeoutConfig, getRetryConfig, TIME_CONSTANTS } from './config';
 
 // Global state
@@ -350,12 +350,16 @@ export default {
         });
       }
 
-      // Handle Swagger UI
-      if (pathname === "/api/swagger" || pathname === "/swagger") {
+      // Handle interactive API reference (Scalar)
+      if (
+        pathname === "/docs" ||
+        pathname === "/api/docs/ui" ||
+        pathname === "/api/swagger" ||
+        pathname === "/swagger"
+      ) {
         const baseUrl = `${url.protocol}//${url.host}`;
-        const swaggerHtml = createSwaggerUI(baseUrl);
-        return new Response(swaggerHtml, {
-          headers: { 
+        return new Response(createApiReference(baseUrl), {
+          headers: {
             "content-type": "text/html; charset=UTF-8",
             'Access-Control-Allow-Origin': '*'
           }

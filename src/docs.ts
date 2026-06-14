@@ -945,8 +945,9 @@ print(data)</code></pre>
 
 
         <div class="links">
-            <a href="${baseUrl}/swagger" target="_blank">API Documentation</a>
+            <a href="${baseUrl}/docs" target="_blank">API Reference</a>
             <a href="${baseUrl}/api/docs" target="_blank">OpenAPI Spec</a>
+            <a href="https://github.com/wra-sol/ridingLookup/tree/main/docs" target="_blank">Documentation</a>
             <a href="https://github.com/wra-sol/ridingLookup" target="_blank">GitHub</a>
         </div>
     </div>
@@ -1042,61 +1043,36 @@ print(data)</code></pre>
 </html>`;
 }
 
-export function createSwaggerUI(baseUrl: string): string {
+/** Keep in sync with devDependency `@scalar/api-reference` in package.json */
+const SCALAR_API_REFERENCE_VERSION = "1.59.3";
+
+export function createApiReference(baseUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Riding Lookup API - Swagger UI</title>
-  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <title>Riding Lookup API Reference</title>
   <style>
-    html {
-      box-sizing: border-box;
-      overflow: -moz-scrollbars-vertical;
-      overflow-y: scroll;
+    html, body {
+      margin: 0;
+      height: 100%;
     }
-    *, *:before, *:after {
-      box-sizing: inherit;
-    }
-    body {
-      margin:0;
-      background: #fafafa;
-    }
-    .swagger-ui .topbar {
-      display: none;
-    }
-.swagger-ui .wrapper span:last-child div.opblock-tag-section:last-child {
-      padding-top: 0;
-      padding-bottom: 40px;
-    }
-}
   </style>
 </head>
 <body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
-  <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"></script>
-  <script>
-    window.onload = function() {
-      const ui = SwaggerUIBundle({
-        url: '${baseUrl}/api/docs',
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        plugins: [
-          SwaggerUIBundle.plugins.DownloadUrl
-        ],
-        layout: "StandaloneLayout"
-      });
-    };
-  </script>
+  <script
+    id="api-reference"
+    data-url="${baseUrl}/api/docs"
+    data-configuration='{"theme":"default","layout":"modern","hideDownloadButton":false}'></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@${SCALAR_API_REFERENCE_VERSION}"></script>
 </body>
 </html>`;
+}
+
+/** @deprecated Use createApiReference */
+export function createSwaggerUI(baseUrl: string): string {
+  return createApiReference(baseUrl);
 }
 
 const RETURN_QUERY_PARAMETER = {
@@ -1195,7 +1171,7 @@ export function createOpenAPISpec(baseUrl: string) {
     info: {
       title: "Riding Lookup API",
       description:
-        "Find Canadian federal, provincial, and territorial ridings by location. Uses GeoGratis Geolocation API (Government of Canada) as the primary geocoding service, with automatic fallback to Google Maps (BYOK), Mapbox, or Nominatim when needed. Features Google Maps batch geocoding for optimal performance and cost efficiency. Built on Cloudflare Workers for global edge performance.",
+        "Find Canadian federal, provincial, and territorial ridings by location. When ODA_GEOCODING_ENABLED is true, address geocoding uses Statistics Canada's Open Database of Addresses in D1; otherwise GeoGratis is tried first with fallback to Google Maps (BYOK), Mapbox, or Nominatim. Supports batch geocoding, lookup caching, and optional provincial riding enrichment. Built on Cloudflare Workers for global edge performance.",
       version: "1.0.0",
       contact: {
         name: "API Support",

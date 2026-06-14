@@ -76,10 +76,13 @@ Rules:
 When enabled, address geocoding uses Statistics Canada's [Open Database of Addresses (ODA)](https://www.statcan.gc.ca/en/lode/databases/oda) stored in Cloudflare D1 — no external geocoding APIs required.
 
 **Documentation:**
+- [Documentation index](docs/README.md)
 - [API contract](docs/oda-geolocation-contract.md)
 - [Data import](docs/oda-data-import.md)
 - [Canada Post-style addresses](docs/canada-post-style-addresses.md)
 - [Fixture examples](docs/oda-fixtures.md)
+- [Performance](docs/performance.md)
+- [Hosting decision](docs/hosting.md)
 
 **Endpoints:**
 - `GET /api/geocode` — forward geocode (address/postal → coordinates)
@@ -91,9 +94,19 @@ When enabled, address geocoding uses Statistics Canada's [Open Database of Addre
 **Setup:**
 ```bash
 wrangler d1 create oda-addresses
-# Add ODA_DB binding to wrangler.jsonc (see commented example)
+# Add ODA_DB binding to wrangler.jsonc (see wrangler.jsonc example)
+
+# Initialize schema, then import (fixture for dev; --download for production)
 npm run import:oda -- --file test/fixtures/oda/fixture.csv --provinces ON,QC --local
+
+# Production: download from StatCan and import to remote D1
+npm run import:oda -- --download --provinces ON --remote --skip-schema
+
+# Resume a long import after interruption
+npm run import:oda -- --download --provinces ON --remote --skip-schema --resume
 ```
+
+See [docs/oda-data-import.md](docs/oda-data-import.md) for all import flags.
 
 Set `ODA_GEOCODING_ENABLED = "true"` in `wrangler.jsonc` after import.
 
@@ -161,8 +174,11 @@ Event-driven notifications for batch completion:
 Interactive API documentation:
 
 - `GET /` — Interactive landing page with API explorer
-- `GET /swagger` — Swagger UI interface
+- `GET /docs` — OpenAPI reference powered by [Scalar](https://scalar.com)
+- `GET /swagger` — Alias of `/docs`
 - `GET /api/docs` — OpenAPI specification (JSON)
+
+Markdown guides live in [`docs/`](docs/README.md).
 
 ### Setup
 
