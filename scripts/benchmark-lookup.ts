@@ -94,8 +94,13 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function timeHttpRequest(url: string): Promise<number> {
+  const headers: Record<string, string> = {};
+  const basicAuth = process.env.BENCHMARK_BASIC_AUTH;
+  if (basicAuth) {
+    headers.Authorization = `Basic ${Buffer.from(basicAuth).toString('base64')}`;
+  }
   const start = performance.now();
-  const response = await fetch(url);
+  const response = await fetch(url, { headers });
   if (!response.ok) {
     throw new Error(`${url} returned ${response.status}`);
   }
