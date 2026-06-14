@@ -109,6 +109,11 @@ Fixture CSV: `test/fixtures/oda/fixture.csv`
 
 **Context:** OpenNorth reports Beaches-East York from postcode for this address; this service expects the provincial riding **Scarborough Southwest (SSW)** for the resolved point.
 
+**Verified (production, 2026-06):**
+- Geocoded point: `43.692101, -79.288688` (757 Victoria Park Ave, Toronto)
+- Federal riding: Scarborough Southwest
+- Provincial riding: Scarborough Southwest
+
 **Expected:**
 - Federal riding resolved for the geocoded point
 - `province_data.riding` or provincial properties indicate Scarborough Southwest (not Beaches-East York)

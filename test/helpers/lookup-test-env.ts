@@ -4,9 +4,9 @@ import type { Env, GeoJSONFeature, GeoJSONFeatureCollection } from '../../src/ty
 export const TORONTO_LAT = 43.642;
 export const TORONTO_LON = -79.398;
 
-/** 757 Victoria Park Ave — OpenNorth parity fixture (issue #11). */
-export const VICTORIA_PARK_LAT = 43.6891;
-export const VICTORIA_PARK_LON = -79.3124;
+/** Geocoded point for 757 Victoria Park Ave (NRCan geolocator, production). */
+export const VICTORIA_PARK_LAT = 43.692101;
+export const VICTORIA_PARK_LON = -79.288688;
 
 const TORONTO_POLYGON: number[][][] = [
   [
@@ -54,14 +54,14 @@ export function buildLookupTestGeoJson(): Record<string, GeoJSONFeatureCollectio
   };
 }
 
-/** Scarborough Southwest at Victoria Park; decoy Beaches—East York polygon does not contain the point. */
+/** Polygon containing the geocoded Victoria Park Ave point. */
 const VICTORIA_PARK_POLYGON: number[][][] = [
   [
-    [-79.32, 43.68],
-    [-79.30, 43.68],
-    [-79.30, 43.70],
-    [-79.32, 43.70],
-    [-79.32, 43.68],
+    [-79.295, 43.685],
+    [-79.28, 43.685],
+    [-79.28, 43.698],
+    [-79.295, 43.698],
+    [-79.295, 43.685],
   ],
 ];
 
@@ -81,8 +81,8 @@ export function buildVictoriaParkGeoJson(): Record<string, GeoJSONFeatureCollect
       type: 'FeatureCollection',
       features: [
         feature(VICTORIA_PARK_POLYGON, {
-          FED_NUM: 35075,
-          ED_NAMEE: 'Scarborough—Guildwood',
+          FED_NUM: 35082,
+          ED_NAMEE: 'Scarborough Southwest',
           PROV_CODE: 'ON',
         }),
       ],

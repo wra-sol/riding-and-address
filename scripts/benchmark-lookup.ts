@@ -126,7 +126,7 @@ async function runSpatialBenchmark(): Promise<void> {
   const index = createSpatialIndex(collection);
   const points = [
     { name: 'Toronto', lon: -79.3832, lat: 43.6532 },
-    { name: '757 Victoria Park fixture', lon: -79.3124, lat: 43.6891 },
+    { name: '757 Victoria Park (geocoded)', lon: -79.288688, lat: 43.692101 },
     { name: 'Montreal', lon: -73.5673, lat: 45.5017 },
   ];
 

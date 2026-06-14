@@ -144,6 +144,6 @@ describe('lookup API integration (PR manual test plan)', () => {
     expect(body.province_data?.riding).toBe('Scarborough Southwest');
     expect(body.province_data?.riding).not.toBe('Beaches—East York');
     expect(body.province_data?.properties?.ENGLISH_NA).toBe('Scarborough Southwest');
-    expect(body.properties?.ED_NAMEE).toBe('Scarborough—Guildwood');
+    expect(body.properties?.ED_NAMEE).toBe('Scarborough Southwest');
   });
 });

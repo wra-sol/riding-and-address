@@ -8,7 +8,7 @@ INSERT INTO oda_addresses (
     mailing_line1, mailing_line2, municipality, province_code, mailing_postal_code,
     search_key, street_key
   ) VALUES (
-    5, 'QC', '350', 'SAINT-PAUL',
+    12, 'QC', '350', 'SAINT-PAUL',
     'RUE', 'E', '',
     'H2Y 1H2', 'Montréal', 'MONTREAL|QC',
     45.5088, -73.554, '350 Rue Saint-Paul E, Montréal QC H2Y 1H2',
@@ -22,7 +22,7 @@ INSERT INTO oda_addresses (
     mailing_line1, mailing_line2, municipality, province_code, mailing_postal_code,
     search_key, street_key
   ) VALUES (
-    6, 'QC', '1000', 'SAINT-DENIS',
+    13, 'QC', '1000', 'SAINT-DENIS',
     'RUE', '', '',
     'H2X 3K8', 'Montréal', 'MONTREAL|QC',
     45.5145, -73.562, '1000 Rue Saint-Denis, Montréal QC H2X 3K8',

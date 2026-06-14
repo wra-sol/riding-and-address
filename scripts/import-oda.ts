@@ -122,6 +122,20 @@ function executeSqlFile(database: string, remote: boolean, filePath: string): vo
   });
 }
 
+function queryNextAddressId(database: string, remote: boolean): number {
+  const remoteFlag = remote ? '--remote' : '--local';
+  const output = execSync(
+    `npx wrangler d1 execute ${database} ${remoteFlag} --command "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM oda_addresses;" --json`,
+    { encoding: 'utf-8' }
+  );
+  const parsed = JSON.parse(output) as Array<{ results?: Array<{ next_id?: number }> }>;
+  const nextId = parsed[0]?.results?.[0]?.next_id;
+  if (typeof nextId !== 'number' || nextId < 1) {
+    return 1;
+  }
+  return nextId;
+}
+
 function initializeSchema(options: ImportOptions): void {
   mkdirSync(options.outputDir, { recursive: true });
   const schemaPath = join(options.outputDir, 'schema.sql');
@@ -213,7 +227,7 @@ async function main(): Promise<void> {
   console.log(`Reading ${options.file}...`);
   const rows = await readCsvRows(options.file);
 
-  let nextId = 1;
+  let nextId = queryNextAddressId(options.database, options.remote);
   for (const province of options.provinces) {
     const result = await importProvinceFromRows(province, rows, options, nextId);
     nextId = result.nextId;
