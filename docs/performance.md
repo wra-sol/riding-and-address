@@ -30,8 +30,9 @@ BENCHMARK_BASE_URL=https://your-worker.workers.dev npm run benchmark:lookup -- -
 - **Geocoding cache** — ODA / GeoGratis / fallback provider results in `GEOCODING_CACHE`
 - **In-memory spatial index LRU** — GeoJSON loaded once per dataset per isolate
 - **Cron cache warming** — preloads federal/provincial GeoJSON on a schedule
-- **Deferred cache writes** — lookup KV `put` runs in `waitUntil` so responses are not blocked on write latency
+- **Deferred cache writes** — lookup and geocoding KV `put` runs in `waitUntil` so responses are not blocked on write latency
 - **Parallel expansion** — when both `return=municipality` and `include_province` are requested, province fetch and address normalization run concurrently
+- **ODA fast-fail** — when ODA is enabled but misses (address not in DB, DB not configured), a single attempt falls through to GeoGratis/Nominatim instead of retrying ODA three times
 
 ## Remaining gaps
 

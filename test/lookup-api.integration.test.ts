@@ -5,6 +5,9 @@ import {
   fetchLookup,
   TORONTO_LAT,
   TORONTO_LON,
+  VICTORIA_PARK_LAT,
+  VICTORIA_PARK_LON,
+  buildVictoriaParkGeoJson,
 } from './helpers/lookup-test-env';
 
 describe('lookup API integration (PR manual test plan)', () => {
@@ -123,5 +126,24 @@ describe('lookup API integration (PR manual test plan)', () => {
     const federal = body.results.find((r) => r.id === 'federal-province');
     expect(federal?.query.includeProvince).toBe(true);
     expect(federal?.province_data?.riding).toBe('Toronto Centre');
+  });
+
+  it('Victoria Park returns Scarborough Southwest, not Beaches—East York (issue #11)', async () => {
+    const env = createLookupTestEnv(buildVictoriaParkGeoJson());
+    const response = await fetchLookup(
+      env,
+      `/api/combined?lat=${VICTORIA_PARK_LAT}&lon=${VICTORIA_PARK_LON}&include_province=true`
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      province_data?: { riding: string; properties: Record<string, unknown> };
+      properties?: { ED_NAMEE?: string };
+    };
+
+    expect(body.province_data?.riding).toBe('Scarborough Southwest');
+    expect(body.province_data?.riding).not.toBe('Beaches—East York');
+    expect(body.province_data?.properties?.ENGLISH_NA).toBe('Scarborough Southwest');
+    expect(body.properties?.ED_NAMEE).toBe('Scarborough—Guildwood');
   });
 });

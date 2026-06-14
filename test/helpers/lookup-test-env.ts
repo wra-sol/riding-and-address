@@ -4,6 +4,10 @@ import type { Env, GeoJSONFeature, GeoJSONFeatureCollection } from '../../src/ty
 export const TORONTO_LAT = 43.642;
 export const TORONTO_LON = -79.398;
 
+/** 757 Victoria Park Ave — OpenNorth parity fixture (issue #11). */
+export const VICTORIA_PARK_LAT = 43.6891;
+export const VICTORIA_PARK_LON = -79.3124;
+
 const TORONTO_POLYGON: number[][][] = [
   [
     [-79.5, 43.5],
@@ -14,12 +18,16 @@ const TORONTO_POLYGON: number[][][] = [
   ],
 ];
 
-function feature(properties: Record<string, unknown>): GeoJSONFeature {
+function feature(polygon: number[][][], properties: Record<string, unknown>): GeoJSONFeature {
   return {
     type: 'Feature',
-    geometry: { type: 'Polygon', coordinates: TORONTO_POLYGON },
+    geometry: { type: 'Polygon', coordinates: polygon },
     properties,
   };
+}
+
+function featureAt(properties: Record<string, unknown>): GeoJSONFeature {
+  return feature(TORONTO_POLYGON, properties);
 }
 
 export function buildLookupTestGeoJson(): Record<string, GeoJSONFeatureCollection> {
@@ -27,7 +35,7 @@ export function buildLookupTestGeoJson(): Record<string, GeoJSONFeatureCollectio
     'federalridings-2024.geojson': {
       type: 'FeatureCollection',
       features: [
-        feature({
+        featureAt({
           FED_NUM: 35100,
           ED_NAMEE: 'Spadina—Harbourfront',
           PROV_CODE: 'ON',
@@ -37,9 +45,58 @@ export function buildLookupTestGeoJson(): Record<string, GeoJSONFeatureCollectio
     'ontarioridings-2022.geojson': {
       type: 'FeatureCollection',
       features: [
-        feature({
+        featureAt({
           PR_NUM: '082',
           ENGLISH_NA: 'Toronto Centre',
+        }),
+      ],
+    },
+  };
+}
+
+/** Scarborough Southwest at Victoria Park; decoy Beaches—East York polygon does not contain the point. */
+const VICTORIA_PARK_POLYGON: number[][][] = [
+  [
+    [-79.32, 43.68],
+    [-79.30, 43.68],
+    [-79.30, 43.70],
+    [-79.32, 43.70],
+    [-79.32, 43.68],
+  ],
+];
+
+const BEACHES_EAST_YORK_DECOY_POLYGON: number[][][] = [
+  [
+    [-79.28, 43.67],
+    [-79.25, 43.67],
+    [-79.25, 43.70],
+    [-79.28, 43.70],
+    [-79.28, 43.67],
+  ],
+];
+
+export function buildVictoriaParkGeoJson(): Record<string, GeoJSONFeatureCollection> {
+  return {
+    'federalridings-2024.geojson': {
+      type: 'FeatureCollection',
+      features: [
+        feature(VICTORIA_PARK_POLYGON, {
+          FED_NUM: 35075,
+          ED_NAMEE: 'Scarborough—Guildwood',
+          PROV_CODE: 'ON',
+        }),
+      ],
+    },
+    'ontarioridings-2022.geojson': {
+      type: 'FeatureCollection',
+      features: [
+        feature(VICTORIA_PARK_POLYGON, {
+          PR_NUM: '086',
+          ENGLISH_NA: 'Scarborough Southwest',
+        }),
+        feature(BEACHES_EAST_YORK_DECOY_POLYGON, {
+          PR_NUM: '020',
+          ENGLISH_NA: 'Beaches—East York',
         }),
       ],
     },

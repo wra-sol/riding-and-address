@@ -319,4 +319,55 @@ describe('geocodeIfNeeded with ODA enabled', () => {
     expect(result.geocodeMethod).toBe('exact');
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
+
+  it('falls back to GeoGratis when ODA address is not found', async () => {
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => null),
+          all: vi.fn(async () => ({ results: [] })),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    globalThis.fetch = vi.fn(async (url: string | URL) => {
+      if (String(url).includes('geogratis')) {
+        return new Response(
+          JSON.stringify([
+            {
+              geometry: { type: 'Point', coordinates: [-79.3124, 43.6891] },
+              qualifier: 'GEOMETRIC_CENTER',
+              score: 0.9,
+            },
+          ]),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      throw new Error(`Unexpected fetch: ${String(url)}`);
+    }) as typeof fetch;
+
+    const env: Env = {
+      RIDINGS: {} as R2Bucket,
+      ODA_DB: db,
+      ODA_GEOCODING_ENABLED: 'true',
+      ODA_PROVINCES: 'ON,QC',
+      GEOCODING_CACHE: {
+        get: async () => null,
+        put: async () => {},
+        delete: async () => {},
+        list: async () => ({ keys: [], list_complete: true, cacheStatus: null }),
+        getWithMetadata: async () => ({ value: null, metadata: null, cacheStatus: null }),
+      } as KVNamespace,
+    };
+
+    const result = await geocodeIfNeeded(env, {
+      address: '757 Victoria Park',
+      city: 'Toronto',
+      state: 'ON',
+    });
+
+    expect(result.lon).toBeCloseTo(-79.3124, 3);
+    expect(result.lat).toBeCloseTo(43.6891, 3);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
 });

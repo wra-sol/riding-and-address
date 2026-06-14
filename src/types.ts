@@ -229,6 +229,9 @@ export type CircuitBreakerExecutor = {
   execute: (key: string, fn: () => Promise<unknown>) => Promise<unknown>;
 };
 
+/** Schedule background work (e.g. KV cache writes) without blocking the response. */
+export type DeferTaskFn = (task: Promise<unknown>) => void;
+
 export interface QueryParams {
   address?: string;
   postal?: string;

@@ -52,7 +52,7 @@ export async function handleLookupRequest(
       request,
       circuitBreaker,
       geocodeIfNeeded: (env, query, req, cb) =>
-        geocodeIfNeeded(env, query, req, undefined, cb),
+        geocodeIfNeeded(env, query, req, undefined, cb, deferTask),
       geocodingTimeoutMs: timeoutConfig.geocoding,
       deferTask,
     });

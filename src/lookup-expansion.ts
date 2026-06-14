@@ -5,6 +5,7 @@ import {
   GoogleAddressComponents,
   CanadaPostStyleAddress,
   CircuitBreakerExecutor,
+  DeferTaskFn,
 } from './types';
 import { generateLookupCacheKey, getCachedLookupResult, setCachedLookupResult } from './cache';
 import { pickDataset, provincePathFromFederalProperties, withTimeout } from './utils';
@@ -56,8 +57,7 @@ export type GeocodeIfNeededFn = (
   mailingAddress?: CanadaPostStyleAddress;
 }>;
 
-/** Schedule background work (e.g. KV cache writes) without blocking the response. */
-export type DeferTaskFn = (task: Promise<unknown>) => void;
+export type { DeferTaskFn };
 
 async function runOrDefer(deferTask: DeferTaskFn | undefined, task: Promise<void>): Promise<void> {
   if (deferTask) {

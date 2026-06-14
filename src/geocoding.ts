@@ -6,7 +6,8 @@ import {
   GoogleAddressComponents,
   GoogleGeocodeLocation,
   OdaGeocodeMetadata,
-  Metrics
+  Metrics,
+  DeferTaskFn,
 } from './types';
 import { getTimeoutConfig, getRetryConfig, TIME_CONSTANTS, TIME_CONSTANTS_SECONDS, QUALITY_THRESHOLDS } from './config';
 import { withRetry, withTimeout, NonRetriableError } from './utils';
@@ -17,7 +18,15 @@ import {
   safeValidateNominatim
 } from './validation';
 import { isOdaEnabled } from './oda-config';
-import { geocodeWithOda } from './oda-geocoding';
+import { geocodeWithOda, OdaGeocodeError } from './oda-geocoding';
+
+async function runOrDefer(deferTask: DeferTaskFn | undefined, task: Promise<void>): Promise<void> {
+  if (deferTask) {
+    deferTask(task);
+  } else {
+    await task;
+  }
+}
 
 // Geocoding cache entry interface
 interface GeocodingCacheEntry {
@@ -652,7 +661,8 @@ export async function geocodeIfNeeded(
   },
   circuitBreaker?: {
     execute: (key: string, fn: () => Promise<unknown>) => Promise<unknown>;
-  }
+  },
+  deferTask?: DeferTaskFn
 ): Promise<GeocodeResult> {
   if (typeof qp.lat === "number" && typeof qp.lon === "number") {
     return { lon: qp.lon, lat: qp.lat };
@@ -677,20 +687,24 @@ export async function geocodeIfNeeded(
       }
 
       metrics?.incrementMetric('geocodingCacheMisses');
-      const odaFn = async (): Promise<GeocodeResult> => geocodeWithOda(env, qp);
-      const retryConfig = getRetryConfig();
-      let odaResult: GeocodeResult;
-      if (circuitBreaker) {
-        odaResult = await circuitBreaker.execute('geocoding:oda', async () =>
-          withRetry(odaFn, retryConfig, 'Geocoding oda')
-        ) as GeocodeResult;
-      } else {
-        odaResult = await withRetry(odaFn, retryConfig, 'Geocoding oda');
+      try {
+        const odaFn = async (): Promise<GeocodeResult> => geocodeWithOda(env, qp);
+        const odaResult = circuitBreaker
+          ? ((await circuitBreaker.execute('geocoding:oda', odaFn)) as GeocodeResult)
+          : await odaFn();
+        await runOrDefer(deferTask, setCachedGeocoding(env, odaCacheKey, odaResult, 'oda'));
+        metrics?.incrementMetric('geocodingSuccesses');
+        metrics?.recordTiming('totalGeocodingTime', Date.now() - startTime);
+        return odaResult;
+      } catch (error) {
+        if (error instanceof OdaGeocodeError) {
+          console.warn(
+            `[GEOCODING] ODA miss (${error.code}), falling back to GeoGratis/${env.GEOCODER || 'nominatim'}`
+          );
+        } else {
+          throw error;
+        }
       }
-      await setCachedGeocoding(env, odaCacheKey, odaResult, 'oda');
-      metrics?.incrementMetric('geocodingSuccesses');
-      metrics?.recordTiming('totalGeocodingTime', Date.now() - startTime);
-      return odaResult;
     }
     
     const geogratisCacheKey = generateGeocodingCacheKey(qp, 'geogratis');
@@ -724,13 +738,16 @@ export async function geocodeIfNeeded(
           console.warn(`[GEOCODING] GeoGratis returned poor score (${geogratisResult.score}), falling back to ${env.GEOCODER || 'nominatim'}`);
         } else {
           // GeoGratis result is good, use it and cache with quality info
-          await setCachedGeocoding(
-            env,
-            geogratisCacheKey,
-            { lon: geogratisResult.lon, lat: geogratisResult.lat },
-            'geogratis',
-            geogratisResult.qualifier,
-            geogratisResult.score
+          await runOrDefer(
+            deferTask,
+            setCachedGeocoding(
+              env,
+              geogratisCacheKey,
+              { lon: geogratisResult.lon, lat: geogratisResult.lat },
+              'geogratis',
+              geogratisResult.qualifier,
+              geogratisResult.score
+            )
           );
           metrics?.incrementMetric('geocodingSuccesses');
           metrics?.recordTiming('totalGeocodingTime', Date.now() - startTime);
@@ -793,7 +810,7 @@ export async function geocodeIfNeeded(
     }
     
     // Cache the result
-    await setCachedGeocoding(env, cacheKey, result, provider);
+    await runOrDefer(deferTask, setCachedGeocoding(env, cacheKey, result, provider));
     
     metrics?.recordTiming('totalGeocodingTime', Date.now() - startTime);
     return result;
