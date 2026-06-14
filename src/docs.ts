@@ -26,11 +26,53 @@ export function createApiReference(baseUrl: string): string {
   <div id="api-reference"></div>
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@${SCALAR_API_REFERENCE_VERSION}"></script>
   <script>
-    Scalar.createApiReference('#api-reference', {
-      url: ${JSON.stringify(`${baseUrl}/api/docs`)},
-      theme: 'default',
-      layout: 'modern',
-    });
+    (function () {
+      var openApiUrl = ${JSON.stringify(`${baseUrl}/api/docs`)};
+      var lookupPaths = ['/api', '/api/federal', '/api/combined', '/api/qc', '/api/on'];
+
+      function hasLocationQuery(params) {
+        if (params.get('postal') || params.get('address') || params.get('city')) {
+          return true;
+        }
+        return Boolean(params.get('lat') && params.get('lon'));
+      }
+
+      function ensureLookupQuery(urlString) {
+        var url = new URL(urlString, window.location.origin);
+        if (lookupPaths.indexOf(url.pathname) === -1) {
+          return urlString;
+        }
+        if (hasLocationQuery(url.searchParams)) {
+          return urlString;
+        }
+        url.searchParams.set('postal', 'K1A 0A6');
+        return url.toString();
+      }
+
+      var originalFetch = window.fetch.bind(window);
+      window.fetch = function (input, init) {
+        try {
+          if (typeof input === 'string') {
+            return originalFetch(ensureLookupQuery(input), init);
+          }
+          if (input instanceof Request) {
+            var nextUrl = ensureLookupQuery(input.url);
+            if (nextUrl !== input.url) {
+              input = new Request(nextUrl, input);
+            }
+          }
+        } catch (_error) {
+          // fall through to original fetch
+        }
+        return originalFetch(input, init);
+      };
+
+      Scalar.createApiReference('#api-reference', {
+        url: openApiUrl,
+        theme: 'default',
+        layout: 'modern',
+      });
+    })();
   </script>
 </body>
 </html>`;
@@ -64,7 +106,7 @@ const LOOKUP_QUERY_PARAMETERS = [
     in: "query" as const,
     description:
       "Canadian postal code (e.g., K1A 0A6). Alternatively provide address or lat/lon instead.",
-    required: true,
+    required: false,
     schema: { type: "string", default: "K1A 0A6", example: "K1A 0A6" },
   },
   {
