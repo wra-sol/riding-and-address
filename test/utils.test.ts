@@ -216,6 +216,7 @@ describe('provincePathFromFederalProperties', () => {
     expect(provincePathFromFederalProperties({ PROV_TERR: 'ON' })).toBe('/api/on');
     expect(provincePathFromFederalProperties({ PROV_TERR: 'ONT' })).toBe('/api/on');
     expect(provincePathFromFederalProperties({ PROV_TERR: 'Ontario' })).toBe('/api/on');
+    expect(provincePathFromFederalProperties({ PROV_CODE: 'ON' })).toBe('/api/on');
   });
 
   it('maps Quebec abbreviations', () => {

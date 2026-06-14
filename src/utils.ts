@@ -495,13 +495,13 @@ const PROV_TERR_TO_PROVINCE_PATH: Record<string, "/api/on" | "/api/qc"> = {
 };
 
 /**
- * Maps federal feature PROV_TERR (abbreviation or full name, EN/FR) to a provincial lookup path.
+ * Maps federal feature province field (PROV_TERR or PROV_CODE) to a provincial lookup path.
  */
 export function provincePathFromFederalProperties(
   properties: Record<string, unknown> | null | undefined
 ): "/api/on" | "/api/qc" | null {
   if (!properties) return null;
-  const raw = properties.PROV_TERR;
+  const raw = properties.PROV_TERR ?? properties.PROV_CODE;
   if (typeof raw !== "string" || !raw.trim()) return null;
   const key = raw
     .trim()
