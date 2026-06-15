@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { geocodeWithOda, reverseGeocodeWithOda, OdaGeocodeError } from '../src/oda-geocoding';
+import { SUPPORTED_ODA_PROVINCES } from '../src/oda-import';
 import type { Env, QueryParams } from '../src/types';
 import { createOdaFixtureEnv } from './helpers/oda-memory-db';
 
@@ -10,7 +11,7 @@ function odaEnv(): Env {
     RIDINGS: {} as R2Bucket,
     ODA_DB: fixtureD1,
     ODA_GEOCODING_ENABLED: 'true',
-    ODA_PROVINCES: 'ON,QC',
+    ODA_PROVINCES: SUPPORTED_ODA_PROVINCES.join(','),
     ODA_MIN_CONFIDENCE: '0.6',
   };
 }
@@ -91,8 +92,17 @@ const FIXTURE_CASES: GeocodeCase[] = [
     expect: { errorCode: 'ADDRESS_NOT_FOUND', errorStatus: 404 },
   },
   {
-    id: 'case-9 province not loaded',
+    id: 'case-9 BC postal centroid',
     query: { postal: 'V6B1A1', state: 'BC' },
+    expect: {
+      geocodeMethod: 'postal_centroid',
+      minConfidence: 0.6,
+      province: 'BC',
+    },
+  },
+  {
+    id: 'case-9b NL province not on StatCan ODA',
+    query: { postal: 'A1C1A1', state: 'NL' },
     expect: { errorCode: 'PROVINCE_NOT_LOADED', errorStatus: 404 },
   },
   {
@@ -175,7 +185,7 @@ describe('ODA reverse geocode (fixture DB)', () => {
 describe('ODA fixture DB coverage summary', () => {
   it('loads all fixture CSV rows into memory', () => {
     const { db } = createOdaFixtureEnv();
-    expect(db.addresses.length).toBe(7);
+    expect(db.addresses.length).toBe(8);
     expect(db.postalCentroids.size).toBeGreaterThan(0);
     expect(db.cityCentroids.size).toBeGreaterThanOrEqual(3);
     expect(db.streetRanges.size).toBeGreaterThan(0);

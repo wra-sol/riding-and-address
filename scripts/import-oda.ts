@@ -21,6 +21,7 @@ import {
   buildCentroidSqlStatements,
   trackCentroidsFromRow,
   PROVINCE_DOWNLOAD_URLS,
+  SUPPORTED_ODA_PROVINCES,
   ODA_DEFAULTS,
   type CentroidAccumulator,
 } from '../src/oda-import';
@@ -53,7 +54,9 @@ function parseArgs(argv: string[]): ImportOptions {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--provinces' && argv[i + 1]) {
-      options.provinces = argv[++i].split(',').map((p) => p.trim().toUpperCase());
+      const raw = argv[++i].trim().toUpperCase();
+      options.provinces =
+        raw === 'ALL' ? [...SUPPORTED_ODA_PROVINCES] : raw.split(',').map((p) => p.trim().toUpperCase()).filter(Boolean);
     } else if (arg === '--file' && argv[i + 1]) {
       options.file = argv[++i];
     } else if (arg === '--download') {

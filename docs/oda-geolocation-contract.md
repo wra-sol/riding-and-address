@@ -6,7 +6,7 @@ This document defines the public API contract for the self-hosted ODA (Open Data
 
 When `ODA_GEOCODING_ENABLED=true`, all address-to-coordinate resolution uses Statistics Canada's [Open Database of Addresses](https://www.statcan.gc.ca/en/lode/databases/oda) stored in Cloudflare D1. No external geocoding providers (GeoGratis, Google, Mapbox, Nominatim) are called.
 
-Initial province coverage: **Ontario (ON)** and **Quebec (QC)**.
+Initial province coverage: **AB, BC, MB, NB, NT, NS, ON, PE, QC, SK** (StatCan [ODA v1.0](https://www.statcan.gc.ca/en/lode/databases/oda)). NL, NU, and YT are not available in ODA; those provinces use GeoGratis/Google fallback geocoding when ODA is enabled.
 
 ## Endpoints
 

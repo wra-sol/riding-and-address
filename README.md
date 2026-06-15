@@ -12,23 +12,23 @@ The API provides lookup endpoints for different levels of government:
 
 ### Provincial Coverage
 
-| Province/Territory | Endpoint | Status | Dataset Year |
-|---------------------|----------|--------|-------------|
-| Ontario | `GET /api/on` | live | 2022 |
-| Quebec | `GET /api/qc` | live | 2025 |
-| British Columbia | `GET /api/bc` | live | 2022 |
-| Alberta | `GET /api/ab` | live | 2022 |
-| Nova Scotia | `GET /api/ns` | live | 2022 |
-| New Brunswick | `GET /api/nb` | live | 2022 |
-| Manitoba | `GET /api/mb` | live | 2022 |
-| Saskatchewan | `GET /api/sk` | live | 2022 |
-| Newfoundland and Labrador | `GET /api/nl` | live | 2022 |
-| Prince Edward Island | `GET /api/pe` | live | 2022 |
-| Northwest Territories | `GET /api/nt` | live | 2022 |
-| Nunavut | `GET /api/nu` | live | 2022 |
-| Yukon | `GET /api/yt` | live | 2022 |
+| Province/Territory | Riding endpoint | Riding data | ODA geocoding |
+|---------------------|-----------------|-------------|---------------|
+| Ontario | `GET /api/on` | live | StatCan ODA |
+| Quebec | `GET /api/qc` | live | StatCan ODA |
+| British Columbia | `GET /api/bc` | live | StatCan ODA |
+| Alberta | `GET /api/ab` | live | StatCan ODA |
+| Nova Scotia | `GET /api/ns` | live | StatCan ODA |
+| New Brunswick | `GET /api/nb` | live | StatCan ODA |
+| Manitoba | `GET /api/mb` | live | StatCan ODA |
+| Saskatchewan | `GET /api/sk` | live | StatCan ODA |
+| Prince Edward Island | `GET /api/pe` | live | StatCan ODA |
+| Northwest Territories | `GET /api/nt` | live | StatCan ODA |
+| Newfoundland and Labrador | `GET /api/nl` | live | fallback geocoders |
+| Nunavut | `GET /api/nu` | live | fallback geocoders |
+| Yukon | `GET /api/yt` | live | fallback geocoders |
 
-**Note:** `live` means the dataset is uploaded to R2 and lookups succeed. `registered` means the endpoint is wired in code but the R2 object is not yet required for health checks. See [`src/datasets.ts`](src/datasets.ts) for the authoritative registry and status values.
+**Riding data** (`live`) means boundary GeoJSON is in R2. **ODA geocoding** uses [StatCan ODA v1.0](https://www.statcan.gc.ca/en/lode/databases/oda) in D1 for the listed provinces; NL, NU, and YT are not in ODA and use GeoGratis/Google fallbacks for address lookup.
 
 ### Query Parameters
 
@@ -138,18 +138,18 @@ wrangler d1 create oda-addresses
 # Initialize schema, then import (fixture for dev; --download for production)
 npm run import:oda -- --file test/fixtures/oda/fixture.csv --provinces ON,QC --local
 
-# Production: download from StatCan and import to remote D1
-npm run import:oda -- --download --provinces ON --remote --skip-schema
+# Production: download all StatCan provinces and import to remote D1
+npm run import:oda:all
 
-# Resume a long import after interruption
-npm run import:oda -- --download --provinces ON --remote --skip-schema --resume
+# Or one province at a time (use --resume for long runs)
+npm run import:oda -- --download --provinces AB,BC --remote --skip-schema --resume
 ```
 
 See [docs/oda-data-import.md](docs/oda-data-import.md) for all import flags.
 
 Set `ODA_GEOCODING_ENABLED = "true"` in `wrangler.jsonc` after import.
 
-**Limitations:** ODA v1.0 is 2021 data. Initial coverage is ON/QC. Returned addresses are Canada Post-style but not Canada Post-certified.
+**Limitations:** ODA v1.0 is 2021 collection data. Coverage: AB, BC, MB, NB, NT, NS, ON, PE, QC, SK (10 provinces). NL, NU, and YT use fallback geocoders. Returned addresses are Canada Post-style but not Canada Post-certified.
 
 ### Advanced Features
 

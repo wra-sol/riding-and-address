@@ -61,8 +61,14 @@ const LIVE_CASES: LiveCase[] = [
     expectMethod: 'exact',
   },
   {
-    name: 'BC not loaded',
+    name: 'BC postal V6B1A1',
     path: '/api/geocode?postal=V6B1A1&province=BC',
+    expectStatus: 200,
+    expectMethod: 'postal_centroid',
+  },
+  {
+    name: 'NL not on StatCan ODA',
+    path: '/api/geocode?postal=A1C1A1&province=NL',
     expectStatus: 404,
     expectCode: 'PROVINCE_NOT_LOADED',
   },
