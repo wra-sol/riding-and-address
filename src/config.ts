@@ -11,6 +11,13 @@ export const TIMEOUT_CONFIG = {
   webhook: 30000         // 30 seconds for webhook delivery
 };
 
+/** Per-provider ceilings within the overall geocoding budget. */
+export const GEOCODING_STAGE_TIMEOUTS = {
+  oda: 3000,
+  geogratis: 5000,
+  fallback: 5000,
+} as const;
+
 // Retry configuration
 export const RETRY_CONFIG = {
   maxAttempts: 3,
