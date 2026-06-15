@@ -1,5 +1,7 @@
 // Documentation and UI functions
 
+import { getAllProvincialPaths } from './utils';
+
 export { createLandingPage } from './landing-page';
 
 /** Keep in sync with devDependency `@scalar/api-reference` in package.json */
@@ -28,7 +30,7 @@ export function createApiReference(baseUrl: string): string {
   <script>
     (function () {
       var openApiUrl = ${JSON.stringify(`${baseUrl}/api/docs`)};
-      var lookupPaths = ['/api', '/api/federal', '/api/combined', '/api/qc', '/api/on'];
+      var lookupPaths = ['/api', '/api/federal', '/api/combined'].concat(${JSON.stringify(getAllProvincialPaths())});
 
       function hasLocationQuery(params) {
         if (params.get('postal') || params.get('address') || params.get('city')) {
@@ -96,10 +98,12 @@ const INCLUDE_PROVINCE_PARAMETER = {
   name: "include_province",
   in: "query" as const,
   description:
-    "Optional flag (`true`/`false`). When true, include matching Ontario or Quebec provincial data in province_data. /api/combined defaults to true.",
+    "Optional flag (`true`/`false`). When true, include matching provincial data in province_data for any supported province. /api/combined defaults to true.",
   required: false,
   schema: { type: "string", enum: ["true", "false"], example: "true" },
 };
+
+const ALL_LOOKUP_PATHS = ['/api', '/api/federal', '/api/combined', ...getAllProvincialPaths()];
 
 const LOOKUP_QUERY_PARAMETERS = [
   {
@@ -161,7 +165,7 @@ const RETURN_RESPONSE_PROPERTIES = {
     type: "object",
     nullable: true,
     description:
-      "Ontario or Quebec provincial riding when include_province=true and PROV_TERR maps to ON/QC",
+      "Provincial riding data when include_province=true and the federal result maps to a supported province",
     properties: {
       riding: { type: "string" },
       properties: { type: "object", nullable: true },
@@ -174,6 +178,50 @@ const RETURN_RESPONSE_PROPERTIES = {
     description: "Municipality when return includes municipality",
   },
 };
+
+function buildProvincialEndpointSpecs(): Record<string, unknown> {
+  const paths: Record<string, unknown> = {};
+  for (const path of getAllProvincialPaths()) {
+    const code = path.replace('/api/', '').toUpperCase();
+    paths[path] = {
+      get: {
+        summary: `Lookup ${code} provincial riding by location`,
+        description: `Find the ${code} provincial riding for a given location`,
+        tags: ["Provincial Ridings"],
+        parameters: LOOKUP_QUERY_PARAMETERS,
+        responses: {
+          "200": {
+            description: "Successful lookup",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    query: { type: "object" },
+                    point: {
+                      type: "object",
+                      properties: {
+                        lon: { type: "number" },
+                        lat: { type: "number" },
+                      },
+                    },
+                    properties: {
+                      type: "object",
+                      nullable: true,
+                    },
+                    ...RETURN_RESPONSE_PROPERTIES,
+                  },
+                },
+              },
+            },
+          },
+        },
+        security: [{ basicAuth: [] }, { apiKey: [] }],
+      },
+    };
+  }
+  return paths;
+}
 
 export function createOpenAPISpec(baseUrl: string) {
   return {
@@ -483,79 +531,7 @@ export function createOpenAPISpec(baseUrl: string) {
           security: [{ basicAuth: [] }, { apiKey: [] }],
         },
       },
-      "/api/qc": {
-        get: {
-          summary: "Lookup Quebec provincial riding by location",
-          description: "Find the Quebec provincial riding for a given location",
-          tags: ["Quebec Ridings"],
-          parameters: LOOKUP_QUERY_PARAMETERS,
-          responses: {
-            "200": {
-              description: "Successful lookup",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      query: { type: "object" },
-                      point: {
-                        type: "object",
-                        properties: {
-                          lon: { type: "number" },
-                          lat: { type: "number" },
-                        },
-                      },
-                      properties: {
-                        type: "object",
-                        nullable: true,
-                      },
-                      ...RETURN_RESPONSE_PROPERTIES,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          security: [{ basicAuth: [] }, { apiKey: [] }],
-        },
-      },
-      "/api/on": {
-        get: {
-          summary: "Lookup Ontario provincial riding by location",
-          description:
-            "Find the Ontario provincial riding for a given location",
-          tags: ["Ontario Ridings"],
-          parameters: LOOKUP_QUERY_PARAMETERS,
-          responses: {
-            "200": {
-              description: "Successful lookup",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      query: { type: "object" },
-                      point: {
-                        type: "object",
-                        properties: {
-                          lon: { type: "number" },
-                          lat: { type: "number" },
-                        },
-                      },
-                      properties: {
-                        type: "object",
-                        nullable: true,
-                      },
-                      ...RETURN_RESPONSE_PROPERTIES,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          security: [{ basicAuth: [] }, { apiKey: [] }],
-        },
-      },
+      ...buildProvincialEndpointSpecs(),
       "/api/geocode": {
         get: {
           summary: "Forward geocode using ODA",
@@ -637,7 +613,7 @@ export function createOpenAPISpec(baseUrl: string) {
                           id: { type: "string" },
                           pathname: {
                             type: "string",
-                            enum: ["/api", "/api/federal", "/api/combined", "/api/qc", "/api/on"],
+                            enum: ALL_LOOKUP_PATHS,
                           },
                           query: {
                             type: "object",
@@ -722,7 +698,7 @@ export function createOpenAPISpec(baseUrl: string) {
                           id: { type: "string" },
                           pathname: {
                             type: "string",
-                            enum: ["/api", "/api/federal", "/api/combined", "/api/qc", "/api/on"],
+                            enum: ALL_LOOKUP_PATHS,
                           },
                           query: {
                             type: "object",
