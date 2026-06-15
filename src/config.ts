@@ -29,13 +29,18 @@ export const RETRY_CONFIG = {
 
 // Get timeout values from environment or use defaults
 export function getTimeoutConfig(env: Env) {
+  const batchTimeout = env.BATCH_TIMEOUT ? Number(env.BATCH_TIMEOUT) : undefined;
   return {
-    geocoding: env.GEOCODING_TIMEOUT ?? TIMEOUT_CONFIG.geocoding,
-    lookup: env.LOOKUP_TIMEOUT ?? TIMEOUT_CONFIG.lookup,
-    batch: env.BATCH_TIMEOUT ?? TIMEOUT_CONFIG.batch,
-    total: env.TOTAL_TIMEOUT ?? TIMEOUT_CONFIG.total,
+    geocoding: TIMEOUT_CONFIG.geocoding,
+    lookup: TIMEOUT_CONFIG.lookup,
+    batch: batchTimeout ?? TIMEOUT_CONFIG.batch,
+    total: TIMEOUT_CONFIG.total,
     webhook: TIMEOUT_CONFIG.webhook,
-    stages: GEOCODING_STAGE_TIMEOUTS,
+    stages: {
+      oda: 5000,       // 5s for ODA geocoding
+      geogratis: 8000, // 8s for GeoGratis
+      fallback: 10000, // 10s for fallback providers
+    }
   };
 }
 

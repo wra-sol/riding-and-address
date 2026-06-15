@@ -8,9 +8,27 @@ The API provides lookup endpoints for different levels of government:
 
 - `GET /api/federal` — Federal ridings (2024 boundaries)
 - `GET /api` — Alias of `/api/federal` for backwards compatibility
-- `GET /api/qc` — Quebec provincial ridings (2025 boundaries)  
-- `GET /api/on` — Ontario provincial ridings (2022 boundaries)
 - `GET /api/combined` — Convenience endpoint equivalent to federal lookup with `include_province=true` by default
+
+### Provincial Coverage
+
+| Province/Territory | Endpoint | Status | Dataset Year |
+|---------------------|----------|--------|-------------|
+| Ontario | `GET /api/on` | ✅ LIVE | 2022 |
+| Quebec | `GET /api/qc` | ✅ LIVE | 2025 |
+| British Columbia | `GET /api/bc` | ✅ READY | 2022 |
+| Alberta | `GET /api/ab` | ✅ READY | 2022 |
+| Nova Scotia | `GET /api/ns` | ✅ READY | 2022 |
+| New Brunswick | `GET /api/nb` | ✅ READY | 2022 |
+| Manitoba | `GET /api/mb` | ✅ READY | 2022 |
+| Saskatchewan | `GET /api/sk` | ✅ READY | 2022 |
+| Newfoundland and Labrador | `GET /api/nl` | ✅ READY | 2022 |
+| Prince Edward Island | `GET /api/pe` | ✅ READY | 2022 |
+| Northwest Territories | `GET /api/nt` | ✅ READY | 2022 |
+| Nunavut | `GET /api/nu` | ✅ READY | 2022 |
+| Yukon | `GET /api/yt` | ✅ READY | 2022 |
+
+**Note:** "READY" means the endpoint is registered in the API but the dataset must be uploaded to R2 before lookups succeed. See [docs/ADDING-A-PROVINCE.md](docs/ADDING-A-PROVINCE.md) for the exact upload process.
 
 ### Query Parameters
 
@@ -21,16 +39,36 @@ Provide either coordinates or a geocodable address:
 - `city` — City name (optional, helps with geocoding)
 - `state` or `province` — Province/state (optional)
 - `country` — Country (optional, defaults to Canada)
-- `include_province` — Optional boolean (`true`/`false`) to include matching Ontario or Quebec provincial data in `province_data`
+- `include_province` — Optional boolean (`true`/`false`) to include matching provincial data in `province_data`
 - `return` — Optional comma-separated list of extra response fields (see below)
 
 #### Optional `include_province` flag
 
 Request provincial riding data without changing the base federal lookup:
 
-- `include_province=true` — include `province_data` when the federal result's `PROV_TERR` maps to ON or QC
+- `include_province=true` — include `province_data` when the federal result's `PROV_TERR` maps to a supported province
 - `include_province=false` — omit provincial lookup (even on `/api/combined`)
 - `/api/combined` defaults to `include_province=true` when the flag is omitted
+
+#### Supported Provinces for `include_province`
+
+When `include_province=true` is set on a federal lookup, the API will automatically resolve the matching provincial riding for any of the following provinces:
+
+- Ontario (ON)
+- Quebec (QC)
+- British Columbia (BC)
+- Alberta (AB)
+- Nova Scotia (NS)
+- New Brunswick (NB)
+- Manitoba (MB)
+- Saskatchewan (SK)
+- Newfoundland and Labrador (NL)
+- Prince Edward Island (PE)
+- Northwest Territories (NT)
+- Nunavut (NU)
+- Yukon (YT)
+
+The provincial dataset must be uploaded to R2 for this to work. See the Provincial Coverage matrix above.
 
 #### Optional `return` selector
 
