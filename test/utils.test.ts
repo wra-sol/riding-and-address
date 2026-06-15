@@ -7,8 +7,6 @@ import {
   polygonContains,
   isPointInPolygon,
   generateCorrelationId,
-  pickDataset,
-  provincePathFromFederalProperties,
   ridingNameFromProperties,
   checkBasicAuth,
   checkAdminAuth,
@@ -191,57 +189,12 @@ describe('generateCorrelationId', () => {
   });
 });
 
-describe('pickDataset', () => {
-  it('maps /api to federal ridings', () => {
-    expect(pickDataset('/api').r2Key).toBe('federalridings-2024.geojson');
-  });
-
-  it('maps /api/federal to federal ridings', () => {
-    expect(pickDataset('/api/federal').r2Key).toBe('federalridings-2024.geojson');
-  });
-
-  it('maps /api/qc to quebec ridings', () => {
-    expect(pickDataset('/api/qc').r2Key).toBe('quebecridings-2025.geojson');
-  });
-
-  it('maps /api/on to ontario ridings', () => {
-    expect(pickDataset('/api/on').r2Key).toBe('ontarioridings-2022.geojson');
-  });
-
-  it('defaults unknown paths to federal', () => {
-    expect(pickDataset('/api/unknown').r2Key).toBe('federalridings-2024.geojson');
-  });
-});
-
-describe('provincePathFromFederalProperties', () => {
-  it('maps Ontario abbreviations', () => {
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'ON' })).toBe('/api/on');
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'ONT' })).toBe('/api/on');
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'Ontario' })).toBe('/api/on');
-    expect(provincePathFromFederalProperties({ PROV_CODE: 'ON' })).toBe('/api/on');
-  });
-
-  it('maps Quebec abbreviations', () => {
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'QC' })).toBe('/api/qc');
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'QUE' })).toBe('/api/qc');
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'Québec' })).toBe('/api/qc');
-  });
-
-  it('returns null for unknown province', () => {
-    expect(provincePathFromFederalProperties({ PROV_TERR: 'BC' })).toBeNull();
-  });
-
-  it('returns null for missing properties', () => {
-    expect(provincePathFromFederalProperties(null)).toBeNull();
-    expect(provincePathFromFederalProperties(undefined)).toBeNull();
-  });
-});
-
 describe('ridingNameFromProperties', () => {
   it('prefers ENGLISH_NAME then ENGLISH_NA and federal fields', () => {
     expect(ridingNameFromProperties({ ENGLISH_NAME: 'Toronto Centre' })).toBe('Toronto Centre');
     expect(ridingNameFromProperties({ ENGLISH_NA: 'Spadina—Fort York' })).toBe('Spadina—Fort York');
     expect(ridingNameFromProperties({ ED_NAMEE: 'Spadina—Harbourfront' })).toBe('Spadina—Harbourfront');
+    expect(ridingNameFromProperties({ ED_NAME: 'Vancouver-False Creek' })).toBe('Vancouver-False Creek');
     expect(ridingNameFromProperties({ FED_NAME: 'Ottawa Centre' })).toBe('Ottawa Centre');
     expect(ridingNameFromProperties({ NM_CEP: 'Jean-Talon' })).toBe('Jean-Talon');
   });

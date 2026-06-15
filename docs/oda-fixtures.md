@@ -83,13 +83,22 @@ Fixture CSV: `test/fixtures/oda/fixture.csv`
 - HTTP 422
 - `code`: `LOW_CONFIDENCE_GEOCODE`
 
-## Case 9: Province not loaded
+## Case 9: BC postal geocode (StatCan ODA)
 
-**Query:** `GET /api/geocode?postal=V6B1A1&province=BC` (BC not imported)
+**Query:** `GET /api/geocode?postal=V6B1A1&province=BC`
+
+**Expected:**
+- HTTP 200
+- `geocodeMethod`: `postal_centroid` (or `exact` when civic match exists)
+- `mailingAddress.province`: `BC`
+
+## Case 9b: NL not on StatCan ODA
+
+**Query:** `GET /api/geocode?postal=A1C1A1&province=NL`
 
 **Expected:**
 - HTTP 404
-- `code`: `PROVINCE_NOT_LOADED`
+- `code`: `PROVINCE_NOT_LOADED` (when ODA is enabled and NL is not in `ODA_PROVINCES`)
 
 ## Case 10: Combined riding lookup with ODA geocoding
 

@@ -8,9 +8,27 @@ The API provides lookup endpoints for different levels of government:
 
 - `GET /api/federal` — Federal ridings (2024 boundaries)
 - `GET /api` — Alias of `/api/federal` for backwards compatibility
-- `GET /api/qc` — Quebec provincial ridings (2025 boundaries)  
-- `GET /api/on` — Ontario provincial ridings (2022 boundaries)
 - `GET /api/combined` — Convenience endpoint equivalent to federal lookup with `include_province=true` by default
+
+### Provincial Coverage
+
+| Province/Territory | Riding endpoint | Riding data | ODA geocoding |
+|---------------------|-----------------|-------------|---------------|
+| Ontario | `GET /api/on` | live | StatCan ODA |
+| Quebec | `GET /api/qc` | live | StatCan ODA |
+| British Columbia | `GET /api/bc` | live | StatCan ODA |
+| Alberta | `GET /api/ab` | live | StatCan ODA |
+| Nova Scotia | `GET /api/ns` | live | StatCan ODA |
+| New Brunswick | `GET /api/nb` | live | StatCan ODA |
+| Manitoba | `GET /api/mb` | live | StatCan ODA |
+| Saskatchewan | `GET /api/sk` | live | StatCan ODA |
+| Prince Edward Island | `GET /api/pe` | live | StatCan ODA |
+| Northwest Territories | `GET /api/nt` | live | StatCan ODA |
+| Newfoundland and Labrador | `GET /api/nl` | live | fallback geocoders |
+| Nunavut | `GET /api/nu` | live | fallback geocoders |
+| Yukon | `GET /api/yt` | live | fallback geocoders |
+
+**Riding data** (`live`) means boundary GeoJSON is in R2. **ODA geocoding** uses [StatCan ODA v1.0](https://www.statcan.gc.ca/en/lode/databases/oda) in D1 for the listed provinces; NL, NU, and YT are not in ODA and use GeoGratis/Google fallbacks for address lookup.
 
 ### Query Parameters
 
@@ -21,16 +39,36 @@ Provide either coordinates or a geocodable address:
 - `city` — City name (optional, helps with geocoding)
 - `state` or `province` — Province/state (optional)
 - `country` — Country (optional, defaults to Canada)
-- `include_province` — Optional boolean (`true`/`false`) to include matching Ontario or Quebec provincial data in `province_data`
+- `include_province` — Optional boolean (`true`/`false`) to include matching provincial data in `province_data`
 - `return` — Optional comma-separated list of extra response fields (see below)
 
 #### Optional `include_province` flag
 
 Request provincial riding data without changing the base federal lookup:
 
-- `include_province=true` — include `province_data` when the federal result's `PROV_TERR` maps to ON or QC
+- `include_province=true` — include `province_data` when the federal result's `PROV_TERR` maps to a supported province
 - `include_province=false` — omit provincial lookup (even on `/api/combined`)
 - `/api/combined` defaults to `include_province=true` when the flag is omitted
+
+#### Supported Provinces for `include_province`
+
+When `include_province=true` is set on a federal lookup, the API will automatically resolve the matching provincial riding for any of the following provinces:
+
+- Ontario (ON)
+- Quebec (QC)
+- British Columbia (BC)
+- Alberta (AB)
+- Nova Scotia (NS)
+- New Brunswick (NB)
+- Manitoba (MB)
+- Saskatchewan (SK)
+- Newfoundland and Labrador (NL)
+- Prince Edward Island (PE)
+- Northwest Territories (NT)
+- Nunavut (NU)
+- Yukon (YT)
+
+The provincial dataset must be uploaded to R2 for this to work. See the Provincial Coverage matrix above.
 
 #### Optional `return` selector
 
@@ -100,18 +138,18 @@ wrangler d1 create oda-addresses
 # Initialize schema, then import (fixture for dev; --download for production)
 npm run import:oda -- --file test/fixtures/oda/fixture.csv --provinces ON,QC --local
 
-# Production: download from StatCan and import to remote D1
-npm run import:oda -- --download --provinces ON --remote --skip-schema
+# Production: download all StatCan provinces and import to remote D1
+npm run import:oda:all
 
-# Resume a long import after interruption
-npm run import:oda -- --download --provinces ON --remote --skip-schema --resume
+# Or one province at a time (use --resume for long runs)
+npm run import:oda -- --download --provinces AB,BC --remote --skip-schema --resume
 ```
 
 See [docs/oda-data-import.md](docs/oda-data-import.md) for all import flags.
 
 Set `ODA_GEOCODING_ENABLED = "true"` in `wrangler.jsonc` after import.
 
-**Limitations:** ODA v1.0 is 2021 data. Initial coverage is ON/QC. Returned addresses are Canada Post-style but not Canada Post-certified.
+**Limitations:** ODA v1.0 is 2021 collection data. Coverage: AB, BC, MB, NB, NT, NS, ON, PE, QC, SK (10 provinces). NL, NU, and YT use fallback geocoders. Returned addresses are Canada Post-style but not Canada Post-certified.
 
 ### Advanced Features
 

@@ -161,4 +161,7 @@ export const PROVINCE_DOWNLOAD_URLS: Record<string, string> = {
   SK: 'https://www150.statcan.gc.ca/n1/en/pub/46-26-0001/2021001/ODA_SK_v1.zip',
 };
 
+/** Province codes with StatCan ODA v1.0 downloads (single source of truth). */
+export const SUPPORTED_ODA_PROVINCES = Object.keys(PROVINCE_DOWNLOAD_URLS).sort() as readonly string[];
+
 export { ODA_DEFAULTS };

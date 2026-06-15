@@ -1,4 +1,20 @@
+import { PROVINCIAL_DATASETS } from './datasets';
+
 export function createLandingPage(baseUrl: string): string {
+  const endpointOptions = PROVINCIAL_DATASETS.map(
+    d => `<option value="${d.path}">${d.path} — ${d.name} provincial (${d.year}, ${d.status})</option>`
+  ).join('\n              ');
+  const pillOptions = PROVINCIAL_DATASETS.map(
+    d => `<span class="pill"><strong>${d.code.toUpperCase()}</strong> ${d.year} ${d.status}</span>`
+  ).join('\n          ');
+  const routeOptions = PROVINCIAL_DATASETS.map(
+    d => `<a class="route" href="${baseUrl}/docs">
+        <span class="method">GET</span>
+        <span class="route-path">${d.path}</span>
+        <span class="route-desc">${d.name} provincial riding lookup</span>
+      </a>`
+  ).join('\n      ');
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -407,8 +423,7 @@ export function createLandingPage(baseUrl: string): string {
         </div>
         <div class="hero-meta">
           <span class="pill"><strong>Federal</strong> 2024 boundaries</span>
-          <span class="pill"><strong>QC</strong> 2025 provincial</span>
-          <span class="pill"><strong>ON</strong> 2022 provincial</span>
+          ${pillOptions}
           <span class="pill"><strong>ODA</strong> geocoding optional</span>
         </div>
       </div>
@@ -421,8 +436,7 @@ export function createLandingPage(baseUrl: string): string {
             <select id="try-endpoint" name="endpoint">
               <option value="/api">/api — Federal</option>
               <option value="/api/combined">/api/combined — Federal + provincial</option>
-              <option value="/api/qc">/api/qc — Quebec provincial</option>
-              <option value="/api/on">/api/on — Ontario provincial</option>
+              ${endpointOptions}
             </select>
           </div>
           <div class="try-row">
@@ -465,7 +479,7 @@ export function createLandingPage(baseUrl: string): string {
       </article>
       <article class="card">
         <h3>Provincial enrichment</h3>
-        <p>Use <code>/api/combined</code> or <code>include_province=true</code> to attach matching Ontario or Quebec provincial results.</p>
+        <p>Use <code>/api/combined</code> or <code>include_province=true</code> to attach matching provincial results for any supported province.</p>
       </article>
       <article class="card">
         <h3>Fast repeat lookups</h3>
@@ -485,8 +499,9 @@ export function createLandingPage(baseUrl: string): string {
       <a class="route" href="${baseUrl}/docs">
         <span class="method">GET</span>
         <span class="route-path">/api/combined</span>
-        <span class="route-desc">Federal plus Ontario or Quebec provincial riding in one response</span>
+        <span class="route-desc">Federal plus provincial riding in one response</span>
       </a>
+      ${routeOptions}
       <a class="route" href="${baseUrl}/docs">
         <span class="method">GET</span>
         <span class="route-path">/api/geocode</span>
@@ -634,7 +649,7 @@ export function createLandingPage(baseUrl: string): string {
           output.textContent = JSON.stringify(data, null, 2);
           setStatus(
             (response.ok ? 'HTTP ' + response.status : 'HTTP ' + response.status + ' error') +
-              ' · ' + elapsed + 'ms',
+              ' \u00b7 ' + elapsed + 'ms',
             response.ok ? 'ok' : 'error'
           );
         } catch (error) {

@@ -4,44 +4,49 @@
 
 Statistics Canada [Open Database of Addresses (ODA)](https://www.statcan.gc.ca/en/lode/databases/oda), version 1.0 (2021001), Open Government License - Canada.
 
-Data collection period: January–April 2021. New developments after 2021 may be missing.
+Data collection period: January–April 2021. New developments after 2021 may be missing. Statistics Canada is developing a National Address Register (NAR) as a successor source.
 
 ## Province downloads
 
 Base URL: `https://www150.statcan.gc.ca/n1/en/pub/46-26-0001/2021001/`
 
-| Province | File |
-|----------|------|
-| Ontario | `ODA_ON_v1.zip` |
-| Quebec | `ODA_QC_v1.zip` |
-| Alberta | `ODA_AB_v1.zip` |
-| British Columbia | `ODA_BC_v1.zip` |
-| Manitoba | `ODA_MB_v1.zip` |
-| New Brunswick | `ODA_NB_v1.zip` |
-| Northwest Territories | `ODA_NT_v1.zip` |
-| Nova Scotia | `ODA_NS_v1.zip` |
-| Prince Edward Island | `ODA_PE_v1.zip` |
-| Saskatchewan | `ODA_SK_v1.zip` |
+| Province | File | Approx. zip size |
+|----------|------|------------------|
+| Ontario | `ODA_ON_v1.zip` | ~154 MB |
+| Quebec | `ODA_QC_v1.zip` | ~37 MB |
+| Alberta | `ODA_AB_v1.zip` | ~70 MB |
+| British Columbia | `ODA_BC_v1.zip` | ~26 MB |
+| Manitoba | `ODA_MB_v1.zip` | ~11 MB |
+| New Brunswick | `ODA_NB_v1.zip` | ~33 MB |
+| Northwest Territories | `ODA_NT_v1.zip` | ~1 MB |
+| Nova Scotia | `ODA_NS_v1.zip` | ~51 MB |
+| Prince Edward Island | `ODA_PE_v1.zip` | ~3 MB |
+| Saskatchewan | `ODA_SK_v1.zip` | ~5 MB |
 
-Initial deployment imports **ON** and **QC** only.
+**Not on StatCan ODA:** Newfoundland and Labrador (NL), Nunavut (NU), Yukon (YT). Riding boundaries exist for these territories; address geocoding uses GeoGratis/Google fallbacks.
 
-## ODA CSV columns used
+Production target: all 10 StatCan provinces. Set `ODA_PROVINCES` in `wrangler.jsonc` to match imported data:
 
-| ODA column | Schema field |
-|------------|--------------|
-| Civic Number | `civic_number` |
-| Standardized Street Name | `street_name` |
-| Standardized Street Type | `street_type` |
-| Standardized Street Direction | `street_direction` |
-| Unit | `unit` |
-| Postal Code | `postal_code` |
-| Processed City | `city` |
-| Province or Territory Unique Identifier | `province` |
-| Latitude | `lat` |
-| Longitude | `lon` |
-| Full Address | `full_address` |
+```
+ODA_PROVINCES: "AB,BC,MB,NB,NT,NS,ON,PE,QC,SK"
+```
 
-Rows without valid coordinates are skipped.
+## Recommended import order
+
+Import smaller provinces first to validate the pipeline, then larger ones. Use `--resume` for every production run.
+
+1. PE, NT (~1–8 min each)
+2. NB, NS (~30–90 min each)
+3. SK, MB (~15–45 min each)
+4. AB, BC (~1–3 hr each)
+5. QC (~1–2 hr; re-import if row count is low)
+6. ON (~6–12 hr; use `--resume` — partial imports are common)
+
+Pilot one province before a full rollout:
+
+```bash
+npm run import:oda -- --download --provinces NS --remote --skip-schema --max-rows 10000
+```
 
 ## Import pipeline
 
@@ -55,24 +60,20 @@ wrangler d1 create oda-addresses
 curl -X POST https://your-worker.workers.dev/api/oda/init \
   -H "Authorization: Basic ..."
 
-# 4. Run import
+# 4. Import all StatCan provinces (sequential, with resume)
+npm run import:oda:all
 
-# Download Ontario from StatCan and import to production D1
-CLOUDFLARE_ACCOUNT_ID=your-account-id \
-npm run import:oda -- --download --provinces ON --remote --skip-schema
+# Or one province:
+npm run import:oda -- --download --provinces NB --remote --skip-schema --resume
 
-# Fixture / local CSV
-npm run import:oda -- --provinces ON,QC --file test/fixtures/oda/fixture.csv --remote --skip-schema
-
-# Pilot import (first N rows only)
-npm run import:oda -- --download --provinces ON --remote --skip-schema --max-rows 10000
-
-# Resume after interruption (skips rows already in D1 for each province)
-npm run import:oda -- --download --provinces ON --remote --skip-schema --resume
+# Fixture / local CSV (dev)
+npm run import:oda -- --provinces ON,QC,BC --file test/fixtures/oda/fixture.csv --local --skip-schema
 
 # 5. Verify stats
-curl https://your-worker.workers.dev/api/oda/stats \
-  -H "Authorization: Basic ..."
+curl https://your-worker.workers.dev/api/oda/stats -H "Authorization: Basic ..."
+# Or via D1:
+wrangler d1 execute oda-addresses --remote --command \
+  "SELECT province, COUNT(*) as cnt FROM oda_addresses GROUP BY province ORDER BY province;"
 ```
 
 ## Import script options
@@ -82,7 +83,7 @@ curl https://your-worker.workers.dev/api/oda/stats \
 | Flag | Description |
 |------|-------------|
 | `--download` | Download and unzip province CSV from StatCan (`ODA_{PR}_v1.zip`) |
-| `--provinces ON,QC` | Provinces to import (default: `ON,QC`) |
+| `--provinces ON,QC` or `ALL` | Provinces to import (default: `ON,QC`; `ALL` = all 10 StatCan codes) |
 | `--file path.csv` | Local CSV instead of download |
 | `--remote` | Write to remote D1 (omit for `--local` dev database) |
 | `--local` | Implicit when `--remote` is omitted |
@@ -107,9 +108,10 @@ Ontario (`ODA_ON_v1.csv`) is ~690 MB uncompressed (~6M addresses). Full import t
 
 ## D1 scale check
 
-Before full ON+QC import, run a fixture import and verify:
+Before a full national import, verify:
 
-- Storage limits for your Cloudflare account
+- Current database size: `wrangler d1 info oda-addresses --json`
+- Cloudflare D1 storage limits for your plan (10 provinces can reach several GB)
 - Write throughput (batch size tuning)
 - Query latency for exact, postal, city, and nearest-neighbor lookups
 
@@ -124,3 +126,5 @@ If D1 cannot hold the full address table:
 Without `--resume`, re-running import for a province deletes existing rows for that province and re-imports. Import metadata is preserved in `oda_imports`.
 
 With `--resume`, existing rows are kept and the CSV stream skips the number of rows already stored for that province.
+
+Re-import QC or ON if `/api/oda/stats` shows unexpectedly low row counts (e.g. QC with only a handful of rows).

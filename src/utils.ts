@@ -3,6 +3,21 @@ import { TIMEOUT_CONFIG, RETRY_CONFIG, getRetryConfig } from './config';
 import { parseGeocodeMethodParam } from './geocode-query';
 import { parseReturnSelector, parseIncludeProvince, resolveIncludeProvince } from './return-selector';
 
+// Re-export dataset registry for backward compatibility
+export {
+  pickDataset,
+  provincePathFromFederalProperties,
+  getAllProvincialPaths,
+  getAllProvincialDatasets,
+  getProvincialDatasetByPath,
+  getProvincialDatasetByCode,
+  PROVINCIAL_DATASETS,
+  FEDERAL_DATASET,
+  type ProvincialDataset,
+  type ProvincialPath,
+  type DatasetStatus,
+} from './datasets';
+
 // Re-export for backward compatibility
 export const DEFAULT_TIMEOUTS = TIMEOUT_CONFIG;
 export const DEFAULT_RETRY_CONFIG = RETRY_CONFIG;
@@ -491,42 +506,6 @@ export function getCorrelationId(request: Request): string {
          generateCorrelationId();
 }
 
-// Dataset selection
-export function pickDataset(pathname: string): { r2Key: string } {
-  // Map routes to R2 object keys
-  if (pathname === "/api/federal" || pathname === "/api") return { r2Key: "federalridings-2024.geojson" };
-  if (pathname === "/api/qc") return { r2Key: "quebecridings-2025.geojson" };
-  if (pathname === "/api/on") return { r2Key: "ontarioridings-2022.geojson" };
-  // default federal (unknown /api/* path)
-  return { r2Key: "federalridings-2024.geojson" };
-}
-
-const PROV_TERR_TO_PROVINCE_PATH: Record<string, "/api/on" | "/api/qc"> = {
-  ON: "/api/on",
-  ONT: "/api/on",
-  ONTARIO: "/api/on",
-  QC: "/api/qc",
-  QUE: "/api/qc",
-  QUEBEC: "/api/qc",
-};
-
-/**
- * Maps federal feature province field (PROV_TERR or PROV_CODE) to a provincial lookup path.
- */
-export function provincePathFromFederalProperties(
-  properties: Record<string, unknown> | null | undefined
-): "/api/on" | "/api/qc" | null {
-  if (!properties) return null;
-  const raw = properties.PROV_TERR ?? properties.PROV_CODE;
-  if (typeof raw !== "string" || !raw.trim()) return null;
-  const key = raw
-    .trim()
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "");
-  return PROV_TERR_TO_PROVINCE_PATH[key] ?? null;
-}
-
 /** Extract a display riding name from feature properties across federal/provincial datasets. */
 export function ridingNameFromProperties(
   properties: Record<string, unknown> | null | undefined
@@ -538,6 +517,7 @@ export function ridingNameFromProperties(
     properties.NAME_EN,
     properties.FED_NAME,
     properties.ED_NAMEE,
+    properties.ED_NAME,
     properties.NM_CEP,
   ];
   for (const candidate of candidates) {

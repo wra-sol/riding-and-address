@@ -18,7 +18,7 @@ Comparison report generated 2026-06-14 from live production data.
 2. **Robustness (93 cases):** 43/93 Riding Lookup lookups succeeded; **23** agreed with OpenNorth on federal riding when both returned a result; **7** genuine disagreements on shared inputs.
 3. **Known divergence — postal vs point:** `M5V2T6` maps to **University—Rosedale** (Riding Lookup, geocoded point-in-polygon on 2024 boundaries) vs **Spadina—Harbourfront** (OpenNorth postal centroid). Same pattern as documented Victoria Park case (postal centroid ≠ geocoded civic address).
 4. **Address geocoding under batch load:** 43 cases hit **30s geocoding timeout**; 0 tripped the **ODA circuit breaker**. Single-request production behavior is fine; this matrix hammers address geocoding with 4500ms spacing — still insufficient for sustained ODA load. Use longer pauses, smaller batches, or `POST /batch` for bulk work.
-5. **Production gap:** `/api/qc` fails — `quebecridings-2025.geojson` not present in R2.
+5. **Production gap (resolved):** Provincial riding GeoJSON and ODA expansion — verify `/api/qc`, `/api/bc`, and `/api/geocode?province=BC` after deploy.
 6. **Ground truth (liblist):** 5 liblist cases where RL and OpenNorth agreed with each other but differed from OLP `RidingName` — likely stale member-list riding labels or boundary redistribution, not API disagreement.
 
 ## Methodology
@@ -228,7 +228,7 @@ Comparison report generated 2026-06-14 from live production data.
 
 ## Recommendations
 
-1. **Upload `quebecridings-2025.geojson` to R2** to fix `/api/qc` in production.
+1. **Deploy worker** with full provincial riding coverage and `ODA_PROVINCES=AB,BC,MB,NB,NT,NS,ON,PE,QC,SK` after D1 import completes.
 2. **Document `M5V2T6` postal divergence** — see [postal-vs-point-lookup.md](postal-vs-point-lookup.md) for integrators comparing against OpenNorth postal centroids.
 3. **Batch clients:** respect rate limits; for address-heavy batches use `POST /batch` or ≥4s spacing to avoid ODA circuit breaker.
 4. **Comparison re-runs:** `BENCHMARK_BASIC_AUTH=... npm run compare:opennorth` then `npm run compare:report`.

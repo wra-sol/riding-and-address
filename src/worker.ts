@@ -23,7 +23,6 @@ import {
   isPointInPolygon, 
   withTimeout, 
   withRetry, 
-  pickDataset, 
   ridingNameFromProperties,
   checkBasicAuth,
   checkAdminAuth, 
@@ -34,13 +33,9 @@ import {
   getClientId,
   getCorrelationId,
 } from './utils';
+import { pickDataset, checkRidingDatasets, allRequiredDatasetsPresent, missingDatasetKeys, getAllR2Keys } from './datasets';
 import { handleLookupRequest } from './lookup-handler';
 import { resolveLookupPath } from './return-selector';
-import {
-  checkRidingDatasets,
-  allRequiredDatasetsPresent,
-  missingDatasetKeys,
-} from './datasets';
 import { 
   createSpatialIndex, 
   findCandidateFeatures, 
@@ -280,7 +275,7 @@ function featurePropertiesIfContains(ridingFeature: GeoJSONFeature, lon: number,
  * @returns HTTP response with lookup results, error messages, or API documentation
  * 
  * Supported endpoints:
- * - GET /api, /api/qc, /api/on - Riding lookup endpoints
+ * - GET /api, /api/federal, /api/combined, /api/{province} - Riding lookup endpoints (see datasets registry)
  * - GET /api/batch - Batch lookup processing
  * - POST /api/batch/queue - Submit batch to queue
  * - GET /api/batch/status - Get batch status
@@ -661,7 +656,7 @@ export default {
             enabled: dbConfig.ENABLED,
             useRtreeIndex: dbConfig.USE_RTREE_INDEX,
             batchInsertSize: dbConfig.BATCH_INSERT_SIZE,
-            datasets: ['federalridings-2024.geojson', 'quebecridings-2025.geojson', 'ontarioridings-2022.geojson']
+            datasets: getAllR2Keys()
           }), {
             headers: { 
               "content-type": "application/json; charset=UTF-8",
