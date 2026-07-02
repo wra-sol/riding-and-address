@@ -10,6 +10,7 @@ import {
 import { parseBatchLookupRequests } from './validation';
 import { type GeocodeBatchResult } from './geocoding';
 import { incrementMetric, recordTiming } from './metrics';
+import { generateId } from './utils';
 import {
   performExpandedLookup,
   expandedLookupResponseFields,
@@ -277,7 +278,7 @@ export async function processQueueJobs(env: Env, maxJobs: number = 10): Promise<
 
 export function createBatchJob(requests: BatchLookupRequest[]): BatchJob {
   return {
-    id: `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: generateId('batch'),
     requests,
     status: 'pending',
     createdAt: Date.now(),

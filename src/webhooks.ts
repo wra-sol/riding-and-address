@@ -1,5 +1,6 @@
 import { Env, WebhookConfig, WebhookEvent, WebhookDelivery } from './types';
 import { TIME_CONSTANTS } from './config';
+import { generateId } from './utils';
 
 // Webhook configuration
 export const WEBHOOK_CONFIG = {
@@ -26,15 +27,15 @@ let webhookProcessingInitialized = false;
 
 // ID generation functions
 export function generateWebhookId(): string {
-  return `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generateId('webhook');
 }
 
 export function generateEventId(): string {
-  return `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generateId('event');
 }
 
 export function generateDeliveryId(): string {
-  return `delivery_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generateId('delivery');
 }
 
 // Helper functions for KV storage

@@ -2,6 +2,7 @@
 
 import { Env } from './types';
 import { parseBatchLookupRequests } from './validation';
+import { generateId } from './utils';
 
 export interface QueueJob {
   id: string;
@@ -370,7 +371,7 @@ export class QueueManager {
       });
     }
 
-    const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const batchId = generateId('batch');
     const batchJob: BatchJob = {
       id: batchId,
       status: 'pending',

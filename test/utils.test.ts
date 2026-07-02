@@ -8,6 +8,7 @@ import {
   polygonContains,
   isPointInPolygon,
   generateCorrelationId,
+  generateId,
   ridingNameFromProperties,
   checkBasicAuth,
   checkAdminAuth,
@@ -187,6 +188,25 @@ describe('generateCorrelationId', () => {
     const id1 = generateCorrelationId();
     const id2 = generateCorrelationId();
     expect(id1).not.toBe(id2);
+  });
+});
+
+describe('generateId', () => {
+  it('generates a string with the given prefix', () => {
+    const id = generateId('test');
+    expect(id.startsWith('test_')).toBe(true);
+  });
+
+  it('generates unique ids', () => {
+    const id1 = generateId('test');
+    const id2 = generateId('test');
+    expect(id1).not.toBe(id2);
+  });
+
+  it('uses slice instead of deprecated substr', () => {
+    const id = generateId('x');
+    expect(id).toMatch(/^x_\d+_[a-z0-9]+$/);
+    expect(id).not.toContain('substr');
   });
 });
 

@@ -488,9 +488,13 @@ export function getClientId(request: Request): string {
   return `ip:${ip}`;
 }
 
-// Generate correlation ID for request tracing
+// Correlation ID generation for request tracing
+export function generateId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export function generateCorrelationId(): string {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generateId('req');
 }
 
 /**
