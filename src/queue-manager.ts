@@ -2,7 +2,7 @@
 
 import { Env } from './types';
 import { parseBatchLookupRequests } from './validation';
-import { generateId } from './utils';
+import { generateId, getQueryPattern } from './utils';
 
 export interface QueueJob {
   id: string;
@@ -250,7 +250,7 @@ export class QueueManager {
     
     for (const request of requests) {
       // Group by pathname and similar query patterns
-      const key = `${request.pathname}:${this.getQueryPattern(request.query)}`;
+      const key = `${request.pathname}:${getQueryPattern(request.query)}`;
       if (!groups.has(key)) {
         groups.set(key, []);
       }
@@ -258,19 +258,6 @@ export class QueueManager {
     }
     
     return groups;
-  }
-
-  private getQueryPattern(query: QueryParams): string {
-    // Create a pattern based on query type for grouping
-    if (query.lat !== undefined && query.lon !== undefined) {
-      return 'coordinates';
-    } else if (query.postal) {
-      return 'postal';
-    } else if (query.address) {
-      return 'address';
-    } else {
-      return 'mixed';
-    }
   }
 
   async fetch(request: Request): Promise<Response> {

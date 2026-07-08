@@ -14,6 +14,7 @@ import {
   checkAdminAuth,
   validateAndSanitizeQuery,
   parseQuery,
+  getQueryPattern,
 } from '../src/utils';
 
 describe('validateCoordinates', () => {
@@ -361,5 +362,31 @@ describe('checkAdminAuth', () => {
   it('accepts valid basic auth credentials', () => {
     const request = authRequest({ Authorization: `Basic ${btoa('admin:secret')}` });
     expect(checkAdminAuth(request, { BASIC_AUTH: 'admin:secret' } as never)).toBe(true);
+  });
+});
+
+describe('getQueryPattern', () => {
+  it('returns coordinates when lat and lon are present', () => {
+    expect(getQueryPattern({ lat: 45.5, lon: -75.7 })).toBe('coordinates');
+  });
+
+  it('returns postal when postal is present', () => {
+    expect(getQueryPattern({ postal: 'K1A 0B1' })).toBe('postal');
+  });
+
+  it('returns address when address is present', () => {
+    expect(getQueryPattern({ address: '123 Main St' })).toBe('address');
+  });
+
+  it('returns mixed for empty query', () => {
+    expect(getQueryPattern({})).toBe('mixed');
+  });
+
+  it('returns coordinates even when postal is also present', () => {
+    expect(getQueryPattern({ lat: 45.5, lon: -75.7, postal: 'K1A 0B1' })).toBe('coordinates');
+  });
+
+  it('returns postal when only city is present (no lat/lon/address)', () => {
+    expect(getQueryPattern({ city: 'Ottawa' })).toBe('mixed');
   });
 });

@@ -238,6 +238,24 @@ export function validateCoordinates(lat: number | undefined, lon: number | undef
 }
 
 /**
+ * Determine the query pattern type for grouping similar batch lookup requests.
+ * 
+ * @param query - Query parameters from a lookup request
+ * @returns Pattern string: 'coordinates', 'postal', 'address', or 'mixed'
+ */
+export function getQueryPattern(query: QueryParams): string {
+  if (query.lat !== undefined && query.lon !== undefined) {
+    return 'coordinates';
+  } else if (query.postal) {
+    return 'postal';
+  } else if (query.address) {
+    return 'address';
+  } else {
+    return 'mixed';
+  }
+}
+
+/**
  * Validates and sanitizes postal codes.
  * Strictly validates Canadian postal codes (A1A 1A1 format), but allows
  * international postal codes to pass through for geocoding services.
