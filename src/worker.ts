@@ -74,31 +74,28 @@ import { getTimeoutConfig, getRetryConfig, TIME_CONSTANTS } from './config';
  */
 async function handleScheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
   console.log(`[Cron] Scheduled event triggered: ${event.cron}`);
-  
-  // Perform cache warming
-  try {
-    await performCacheWarming(env, async (env: Env, r2Key: string) => {
+
+  // Run independent maintenance tasks in parallel to minimize cron duration
+  const results = await Promise.allSettled([
+    performCacheWarming(env, async (env: Env, r2Key: string) => {
       await loadGeo(env, r2Key);
-    }, lookupRiding);
-    console.log('[Cron] Cache warming completed successfully');
-  } catch (error) {
-    console.error('[Cron] Cache warming failed:', error);
-  }
+    }, lookupRiding)
+      .then(() => console.log('[Cron] Cache warming completed successfully'))
+      .catch((error) => { console.error('[Cron] Cache warming failed:', error); throw error; }),
 
-  // Process pending webhook events
-  try {
-    await processWebhookEvents(env);
-    console.log('[Cron] Webhook processing completed successfully');
-  } catch (error) {
-    console.error('[Cron] Webhook processing failed:', error);
-  }
+    processWebhookEvents(env)
+      .then(() => console.log('[Cron] Webhook processing completed successfully'))
+      .catch((error) => { console.error('[Cron] Webhook processing failed:', error); throw error; }),
 
-  // Cleanup old webhook data
-  try {
-    await cleanupWebhookData(env);
-    console.log('[Cron] Webhook cleanup completed successfully');
-  } catch (error) {
-    console.error('[Cron] Webhook cleanup failed:', error);
+    cleanupWebhookData(env)
+      .then(() => console.log('[Cron] Webhook cleanup completed successfully'))
+      .catch((error) => { console.error('[Cron] Webhook cleanup failed:', error); throw error; }),
+  ]);
+
+  // Log summary of any failures
+  const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (failures.length > 0) {
+    console.error(`[Cron] ${failures.length}/3 scheduled tasks failed`);
   }
 }
 
