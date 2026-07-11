@@ -52,6 +52,8 @@ import {
   getWebhookEvents,
   getWebhookDeliveries,
   createWebhook,
+  updateWebhook,
+  deleteWebhook,
   processWebhookEvents,
   cleanupWebhookData
 } from './webhooks';
@@ -309,7 +311,7 @@ export default {
         const allowedOrigin = origin || '*';
         return {
           'Access-Control-Allow-Origin': allowedOrigin,
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Google-API-Key, X-Correlation-ID, X-Request-ID',
           'Access-Control-Max-Age': '86400',
           'X-Correlation-ID': correlationId
@@ -855,6 +857,67 @@ export default {
               'Access-Control-Allow-Origin': '*'
             }
           });
+        }
+
+        // Handle PUT /api/webhooks/{id} and DELETE /api/webhooks/{id}
+        const webhookIdMatch = /^\/api\/webhooks\/([^/]+)$/.exec(pathname);
+        if (webhookIdMatch) {
+          if (!checkAdminAuth(request, env)) {
+            return unauthorizedResponse(correlationId);
+          }
+          const webhookId = webhookIdMatch[1];
+
+          if (request.method === 'PUT') {
+            try {
+              const body = await request.json() as { url?: string; events?: string[]; secret?: string; active?: boolean };
+              const updated = await updateWebhook(env, webhookId, {
+                ...(body.url !== undefined && { url: body.url }),
+                ...(body.events !== undefined && { events: body.events }),
+                ...(body.secret !== undefined && { secret: body.secret }),
+                ...(body.active !== undefined && { active: body.active }),
+              });
+              if (!updated) {
+                return badRequest(`Webhook ${webhookId} not found`, 404);
+              }
+              return new Response(JSON.stringify({
+                webhookId,
+                message: "Webhook updated successfully"
+              }), {
+                headers: { 
+                  "content-type": "application/json; charset=UTF-8",
+                  'Access-Control-Allow-Origin': '*'
+                }
+              });
+            } catch (error) {
+              return badRequest(
+                error instanceof Error ? error.message : "Failed to update webhook",
+                500
+              );
+            }
+          }
+
+          if (request.method === 'DELETE') {
+            try {
+              const deleted = await deleteWebhook(env, webhookId);
+              if (!deleted) {
+                return badRequest(`Webhook ${webhookId} not found`, 404);
+              }
+              return new Response(JSON.stringify({
+                webhookId,
+                message: "Webhook deleted successfully"
+              }), {
+                headers: { 
+                  "content-type": "application/json; charset=UTF-8",
+                  'Access-Control-Allow-Origin': '*'
+                }
+              });
+            } catch (error) {
+              return badRequest(
+                error instanceof Error ? error.message : "Failed to delete webhook",
+                500
+              );
+            }
+          }
         }
         
         return badRequest("Webhook endpoint not found", 404);
