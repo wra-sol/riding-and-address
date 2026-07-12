@@ -1251,7 +1251,15 @@ export default {
       incrementMetric('errorCount');
       recordTiming('totalLookupTime', Date.now() - startTime);
       console.error(`[${correlationId}] Unexpected error:`, err);
-      return badRequest(err instanceof Error ? err.message : "Unexpected error", 400, "UNEXPECTED_ERROR", correlationId);
+      const message = err instanceof Error ? err.message : "Unexpected error";
+      return new Response(JSON.stringify({ error: message, code: "UNEXPECTED_ERROR", correlationId, timestamp: Date.now() }), {
+        status: 500,
+        headers: {
+          "content-type": "application/json; charset=UTF-8",
+          'Access-Control-Allow-Origin': '*',
+          'X-Correlation-ID': correlationId
+        }
+      });
     }
   },
   
