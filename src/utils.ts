@@ -601,10 +601,13 @@ export function badRequest(message: string, status = 400, code?: string, correla
   if (code) errorResponse.code = code;
   if (correlationId) errorResponse.correlationId = correlationId;
   if (details) errorResponse.details = details;
-  
+
   return new Response(JSON.stringify(errorResponse), {
     status,
-    headers: { "content-type": "application/json; charset=UTF-8" }
+    headers: {
+      "content-type": "application/json; charset=UTF-8",
+      "Access-Control-Allow-Origin": "*"
+    }
   });
 }
 
@@ -615,12 +618,13 @@ export function unauthorizedResponse(correlationId?: string): Response {
     timestamp: Date.now()
   };
   if (correlationId) errorResponse.correlationId = correlationId;
-  
+
   return new Response(JSON.stringify(errorResponse), {
     status: 401,
-    headers: { 
+    headers: {
       "content-type": "application/json; charset=UTF-8",
-      "WWW-Authenticate": "Basic realm=\"Riding Lookup API\""
+      "WWW-Authenticate": "Basic realm=\"Riding Lookup API\"",
+      "Access-Control-Allow-Origin": "*"
     }
   });
 }
@@ -632,12 +636,13 @@ export function rateLimitExceededResponse(correlationId?: string): Response {
     timestamp: Date.now()
   };
   if (correlationId) errorResponse.correlationId = correlationId;
-  
+
   return new Response(JSON.stringify(errorResponse), {
     status: 429,
-    headers: { 
+    headers: {
       "content-type": "application/json; charset=UTF-8",
-      "Retry-After": "60"
+      "Retry-After": "60",
+      "Access-Control-Allow-Origin": "*"
     }
   });
 }

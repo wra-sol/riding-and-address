@@ -15,6 +15,9 @@ import {
   validateAndSanitizeQuery,
   parseQuery,
   getQueryPattern,
+  badRequest,
+  unauthorizedResponse,
+  rateLimitExceededResponse,
 } from '../src/utils';
 
 describe('validateCoordinates', () => {
@@ -388,5 +391,62 @@ describe('getQueryPattern', () => {
 
   it('returns postal when only city is present (no lat/lon/address)', () => {
     expect(getQueryPattern({ city: 'Ottawa' })).toBe('mixed');
+  });
+});
+
+describe('badRequest', () => {
+  it('returns 400 with CORS headers', () => {
+    const response = badRequest('Invalid input');
+    expect(response.status).toBe(400);
+    expect(response.headers.get('content-type')).toBe('application/json; charset=UTF-8');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+
+  it('includes error code and correlationId when provided', async () => {
+    const response = badRequest('Bad request', 400, 'BAD_REQUEST', 'corr-123');
+    const body = await response.json() as { error: string; code: string; correlationId: string; timestamp: number };
+    expect(body.error).toBe('Bad request');
+    expect(body.code).toBe('BAD_REQUEST');
+    expect(body.correlationId).toBe('corr-123');
+    expect(body.timestamp).toBeTypeOf('number');
+  });
+
+  it('uses custom status code', () => {
+    const response = badRequest('Not found', 404, 'NOT_FOUND');
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('unauthorizedResponse', () => {
+  it('returns 401 with CORS and WWW-Authenticate headers', () => {
+    const response = unauthorizedResponse();
+    expect(response.status).toBe(401);
+    expect(response.headers.get('content-type')).toBe('application/json; charset=UTF-8');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(response.headers.get('WWW-Authenticate')).toContain('Basic realm=');
+  });
+
+  it('includes correlationId when provided', async () => {
+    const response = unauthorizedResponse('corr-456');
+    const body = await response.json() as { code: string; correlationId: string };
+    expect(body.code).toBe('UNAUTHORIZED');
+    expect(body.correlationId).toBe('corr-456');
+  });
+});
+
+describe('rateLimitExceededResponse', () => {
+  it('returns 429 with CORS and Retry-After headers', () => {
+    const response = rateLimitExceededResponse();
+    expect(response.status).toBe(429);
+    expect(response.headers.get('content-type')).toBe('application/json; charset=UTF-8');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(response.headers.get('Retry-After')).toBe('60');
+  });
+
+  it('includes correlationId when provided', async () => {
+    const response = rateLimitExceededResponse('corr-789');
+    const body = await response.json() as { code: string; correlationId: string };
+    expect(body.code).toBe('RATE_LIMIT_EXCEEDED');
+    expect(body.correlationId).toBe('corr-789');
   });
 });
