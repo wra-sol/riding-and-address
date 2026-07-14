@@ -162,30 +162,23 @@ export type DatasetAvailability = {
  * Head-check each registered riding dataset in R2 (does not download full GeoJSON).
  */
 export async function checkRidingDatasets(env: Env): Promise<DatasetAvailability[]> {
-  const results: DatasetAvailability[] = [];
-
   const entries: Array<{ key: RidingDatasetKey; route: string; status: DatasetStatus }> = [
     { key: FEDERAL_DATASET.r2Key, route: FEDERAL_DATASET.path, status: FEDERAL_DATASET.status },
     ...PROVINCIAL_DATASETS.map((d) => ({ key: d.r2Key, route: d.path, status: d.status })),
   ];
 
-  for (const entry of entries) {
-    let present = false;
-    try {
-      const head = await env.RIDINGS.head(entry.key);
-      present = head !== null;
-    } catch {
-      present = false;
-    }
-    results.push({
-      key: entry.key,
-      route: entry.route,
-      status: entry.status,
-      present,
-    });
-  }
+  const checks = await Promise.all(
+    entries.map(async (entry) => {
+      try {
+        const head = await env.RIDINGS.head(entry.key);
+        return { ...entry, present: head !== null };
+      } catch {
+        return { ...entry, present: false };
+      }
+    })
+  );
 
-  return results;
+  return checks;
 }
 
 export function allRequiredDatasetsPresent(datasets: DatasetAvailability[]): boolean {
