@@ -29,6 +29,7 @@ import {
   badRequest, 
   unauthorizedResponse, 
   rateLimitExceededResponse,
+  jsonResponse,
   checkRateLimit,
   getClientId,
   getCorrelationId,
@@ -341,12 +342,7 @@ export default {
       // Handle OpenAPI docs
       if (pathname === "/api/docs") {
         const baseUrl = `${url.protocol}//${url.host}`;
-        return new Response(JSON.stringify(createOpenAPISpec(baseUrl)), {
-          headers: { 
-            "content-type": "application/json; charset=UTF-8",
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        return jsonResponse(createOpenAPISpec(baseUrl));
       }
 
       // Handle interactive API reference (Scalar)
@@ -368,15 +364,10 @@ export default {
       // Health check endpoint (public liveness; detailed diagnostics require admin auth)
       if (pathname === '/health') {
         if (!checkAdminAuth(request, env)) {
-          return new Response(JSON.stringify({
+          return jsonResponse({
             status: 'healthy',
             timestamp: Date.now(),
-          }), {
-            headers: {
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          }, 500, { "X-Correlation-ID": correlationId });
         }
 
         const metrics = getMetrics();
@@ -389,7 +380,7 @@ export default {
         const datasetsOk = allRequiredDatasetsPresent(datasets);
         const missingDatasets = missingDatasetKeys(datasets);
 
-        return new Response(JSON.stringify({
+        return jsonResponse({
           status: datasetsOk ? 'healthy' : 'unhealthy',
           timestamp: Date.now(),
           metrics,
@@ -397,12 +388,7 @@ export default {
           cacheWarming: getCacheWarmingStatus(),
           datasets,
           ...(missingDatasets.length > 0 && { missingDatasets }),
-        }), {
-          headers: {
-            "content-type": "application/json; charset=UTF-8",
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        }, 500, { "X-Correlation-ID": correlationId });
       }
 
       // Admin circuit breaker reset
@@ -418,21 +404,11 @@ export default {
           } else {
             await geocodingCircuitBreaker.reset(key);
           }
-          return new Response(JSON.stringify({ success: true, message: `Circuit breaker ${key} reset` }), {
-            headers: {
-              'content-type': 'application/json; charset=UTF-8',
-              'Access-Control-Allow-Origin': '*',
-            },
-          });
+          return jsonResponse({ success: true, message: `Circuit breaker ${key} reset` });
         }
 
         await geocodingCircuitBreaker.resetAll();
-        return new Response(JSON.stringify({ success: true, message: 'All circuit breakers reset' }), {
-          headers: {
-            'content-type': 'application/json; charset=UTF-8',
-            'Access-Control-Allow-Origin': '*',
-          },
-        });
+        return jsonResponse({ success: true, message: 'All circuit breakers reset' });
       }
 
       // Metrics endpoint
@@ -442,12 +418,7 @@ export default {
         }
 
         const metrics = getMetricsSummary();
-        return new Response(JSON.stringify(metrics), {
-          headers: {
-            "content-type": "application/json; charset=UTF-8",
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        return jsonResponse(metrics);
       }
 
       // Webhook management endpoints
@@ -468,32 +439,17 @@ export default {
             failureCount: config.failureCount
           }));
           
-          return new Response(JSON.stringify({ webhooks }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse({ webhooks });
         }
         
         if (pathname === '/webhooks/events' && request.method === 'GET') {
           const events = await getWebhookEvents(env);
-          return new Response(JSON.stringify({ events }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse({ events });
         }
         
         if (pathname === '/webhooks/deliveries' && request.method === 'GET') {
           const deliveries = await getWebhookDeliveries(env);
-          return new Response(JSON.stringify({ deliveries }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse({ deliveries });
         }
       }
       
@@ -504,17 +460,12 @@ export default {
         }
 
         const status = getCacheWarmingStatus();
-        return new Response(JSON.stringify({
+        return jsonResponse({
           ...status,
           config: {
             enabled: true,
             interval: TIME_CONSTANTS.SIX_HOURS_MS,
             batchSize: 5
-          }
-        }), {
-          headers: { 
-            "content-type": "application/json; charset=UTF-8",
-            'Access-Control-Allow-Origin': '*'
           }
         });
       }
@@ -528,14 +479,9 @@ export default {
           
           try {
             const success = await initializeSpatialDatabase(env);
-            return new Response(JSON.stringify({
+            return jsonResponse({
               success,
               message: success ? "Database initialized successfully" : "Database initialization failed"
-            }), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
             });
           } catch (error) {
             return badRequest(
@@ -555,15 +501,10 @@ export default {
             const dataset = body.dataset || 'federalridings-2024.geojson';
             
             const success = await syncGeoJSONToDatabase(env, dataset, loadGeo);
-            return new Response(JSON.stringify({
+            return jsonResponse({
               success,
               message: success ? `Database synced for ${dataset}` : "Database sync failed",
               dataset
-            }), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
             });
           } catch (error) {
             return badRequest(
@@ -581,17 +522,12 @@ export default {
           try {
             // This would need to be implemented to get actual database stats
             const dbConfig = getSpatialDbConfig(env);
-            return new Response(JSON.stringify({
+            return jsonResponse({
               enabled: dbConfig.ENABLED,
               features: 0, // Would need actual count
               lastSync: null, // Would need actual timestamp
               status: dbConfig.ENABLED ? "active" : "disabled"
-            }), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            }, 500, { "X-Correlation-ID": correlationId });
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Failed to get database stats",
@@ -611,12 +547,7 @@ export default {
           
           try {
             const result = await queryRidingFromDatabase(env, dataset, lon, lat);
-            return new Response(JSON.stringify(result), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            return jsonResponse(result);
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Database query failed",
@@ -640,12 +571,7 @@ export default {
           
           try {
             const result = await lookupRiding(env, resolveLookupPath('/api').datasetPath, lon, lat);
-            return new Response(JSON.stringify(result), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            return jsonResponse(result);
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Boundaries lookup failed",
@@ -663,12 +589,7 @@ export default {
             const dbConfig = getSpatialDbConfig(env);
             if (dbConfig.ENABLED && env.RIDING_DB) {
               const result = await getAllFeaturesFromDatabase(env, dataset, limit, offset);
-              return new Response(JSON.stringify(result), {
-                headers: { 
-                  "content-type": "application/json; charset=UTF-8",
-                  'Access-Control-Allow-Origin': '*'
-                }
-              });
+              return jsonResponse(result);
             } else {
               return badRequest('Spatial database not enabled', 503);
             }
@@ -682,16 +603,11 @@ export default {
         
         if (pathname === '/api/boundaries/config' && request.method === 'GET') {
           const dbConfig = getSpatialDbConfig(env);
-          return new Response(JSON.stringify({
+          return jsonResponse({
             enabled: dbConfig.ENABLED,
             useRtreeIndex: dbConfig.USE_RTREE_INDEX,
             batchInsertSize: dbConfig.BATCH_INSERT_SIZE,
             datasets: getAllR2Keys()
-          }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
           });
         }
         
@@ -701,7 +617,7 @@ export default {
       // Handle geocoding batch status endpoint
       if (pathname === "/api/geocoding/batch/status") {
         if (request.method === "GET") {
-          return new Response(JSON.stringify({
+          return jsonResponse({
             enabled: true,
             maxBatchSize: 10,
             timeout: 30000,
@@ -709,11 +625,6 @@ export default {
             fallbackToIndividual: true,
             hasGoogleApiKey: !!(env.GOOGLE_MAPS_KEY),
             timestamp: Date.now()
-          }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
           });
         } else {
           return badRequest("Method not allowed", 405);
@@ -739,15 +650,10 @@ export default {
               }
             }
             
-            return new Response(JSON.stringify({
+            return jsonResponse({
               message: "Cache warming initiated",
               locations: locations.length,
               timestamp: Date.now()
-            }), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
             });
           } catch (error) {
             return badRequest(
@@ -780,12 +686,7 @@ export default {
             active: config.active
           }));
           
-          return new Response(JSON.stringify({ webhooks }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse({ webhooks });
         }
         
         if (pathname === '/api/webhooks' && request.method === 'POST') {
@@ -802,14 +703,9 @@ export default {
               active: true
             });
             
-            return new Response(JSON.stringify({
+            return jsonResponse({
               webhookId,
               message: "Webhook created successfully"
-            }), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
             });
           } catch (error) {
             return badRequest(
@@ -831,12 +727,7 @@ export default {
           const events = await getWebhookEvents(env, webhookId || undefined);
           const filteredEvents = status ? events.filter(e => e.status === status) : events;
           
-          return new Response(JSON.stringify({ events: filteredEvents }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse({ events: filteredEvents });
         }
         
         if (pathname === '/api/webhooks/deliveries' && request.method === 'GET') {
@@ -851,12 +742,7 @@ export default {
           const deliveries = await getWebhookDeliveries(env, webhookId || undefined);
           const filteredDeliveries = status ? deliveries.filter(d => d.status === status) : deliveries;
           
-          return new Response(JSON.stringify({ deliveries: filteredDeliveries }), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse({ deliveries: filteredDeliveries });
         }
 
         // Handle PUT /api/webhooks/{id} and DELETE /api/webhooks/{id}
@@ -879,14 +765,9 @@ export default {
               if (!updated) {
                 return badRequest(`Webhook ${webhookId} not found`, 404);
               }
-              return new Response(JSON.stringify({
+              return jsonResponse({
                 webhookId,
                 message: "Webhook updated successfully"
-              }), {
-                headers: { 
-                  "content-type": "application/json; charset=UTF-8",
-                  'Access-Control-Allow-Origin': '*'
-                }
               });
             } catch (error) {
               return badRequest(
@@ -902,14 +783,9 @@ export default {
               if (!deleted) {
                 return badRequest(`Webhook ${webhookId} not found`, 404);
               }
-              return new Response(JSON.stringify({
+              return jsonResponse({
                 webhookId,
                 message: "Webhook deleted successfully"
-              }), {
-                headers: { 
-                  "content-type": "application/json; charset=UTF-8",
-                  'Access-Control-Allow-Origin': '*'
-                }
               });
             } catch (error) {
               return badRequest(
@@ -965,12 +841,7 @@ export default {
               cb
             );
             
-            return new Response(JSON.stringify({ results }), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            return jsonResponse({ results });
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Batch processing failed",
@@ -983,12 +854,7 @@ export default {
           const batchId = pathname.split('/')[2];
           try {
             const status = await getBatchStatus(env, batchId);
-            return new Response(JSON.stringify(status), {
-              headers: { 
-                "content-type": "application/json; charset=UTF-8",
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            return jsonResponse(status);
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Failed to get batch status",
@@ -1032,12 +898,7 @@ export default {
           }
 
           const result = await submitBatchToQueue(env, parsedRequests.data);
-          return new Response(JSON.stringify(result), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse(result);
         } catch (error) {
           return badRequest(
             error instanceof Error ? error.message : "Failed to submit batch to queue",
@@ -1064,12 +925,7 @@ export default {
         
         try {
           const result = await getBatchStatus(env, batchId);
-          return new Response(JSON.stringify(result), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse(result);
         } catch (error) {
           return badRequest(
             error instanceof Error ? error.message : "Failed to get batch status",
@@ -1092,12 +948,7 @@ export default {
         try {
           const body = await request.json() as { maxJobs?: number };
           const result = await processQueueJobs(env, body.maxJobs || 10);
-          return new Response(JSON.stringify(result), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse(result);
         } catch (error) {
           return badRequest(
             error instanceof Error ? error.message : "Failed to process queue jobs",
@@ -1133,12 +984,7 @@ export default {
           }
           
           const stats = await response.json();
-          return new Response(JSON.stringify(stats), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse(stats);
         } catch (error) {
           return badRequest(
             error instanceof Error ? error.message : "Failed to get queue stats",
@@ -1156,12 +1002,7 @@ export default {
         try {
           const body = await request.json() as { maxJobs?: number };
           const result = await processQueueJobs(env, body.maxJobs || 10);
-          return new Response(JSON.stringify(result), {
-            headers: { 
-              "content-type": "application/json; charset=UTF-8",
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return jsonResponse(result);
         } catch (error) {
           return badRequest(
             error instanceof Error ? error.message : "Queue processing failed",
@@ -1252,14 +1093,7 @@ export default {
       recordTiming('totalLookupTime', Date.now() - startTime);
       console.error(`[${correlationId}] Unexpected error:`, err);
       const message = err instanceof Error ? err.message : "Unexpected error";
-      return new Response(JSON.stringify({ error: message, code: "UNEXPECTED_ERROR", correlationId, timestamp: Date.now() }), {
-        status: 500,
-        headers: {
-          "content-type": "application/json; charset=UTF-8",
-          'Access-Control-Allow-Origin': '*',
-          'X-Correlation-ID': correlationId
-        }
-      });
+      return jsonResponse({ error: message, code: "UNEXPECTED_ERROR", correlationId, timestamp: Date.now() }, 500, { "X-Correlation-ID": correlationId });
     }
   },
   

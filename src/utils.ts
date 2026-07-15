@@ -647,6 +647,20 @@ export function rateLimitExceededResponse(correlationId?: string): Response {
   });
 }
 
+/**
+ * Create a JSON response with standard CORS headers.
+ */
+export function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=UTF-8",
+      "Access-Control-Allow-Origin": "*",
+      ...extraHeaders
+    }
+  });
+}
+
 // Authentication
 function verifyBasicAuthCredentials(request: Request, env: Env): boolean {
   const authHeader = request.headers.get("Authorization");
