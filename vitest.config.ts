@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    pool: 'vmThreads',
     include: ['test/**/*.test.ts']
   }
 });
