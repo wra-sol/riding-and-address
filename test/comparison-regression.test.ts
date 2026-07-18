@@ -21,7 +21,7 @@ const cases = JSON.parse(
 
 const postalAndCoordCases = cases.filter((c) => c.category === 'A' || c.category === 'C');
 
-function toSearchParams(query: Record<string, string>): string {
+function _toSearchParams(query: Record<string, string>): string {
   return new URLSearchParams(query).toString();
 }
 

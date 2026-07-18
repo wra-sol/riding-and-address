@@ -367,7 +367,7 @@ export default {
           return jsonResponse({
             status: 'healthy',
             timestamp: Date.now(),
-          }, 500, { "X-Correlation-ID": correlationId });
+          }, 200, { "X-Correlation-ID": correlationId });
         }
 
         const metrics = getMetrics();
@@ -388,7 +388,7 @@ export default {
           cacheWarming: getCacheWarmingStatus(),
           datasets,
           ...(missingDatasets.length > 0 && { missingDatasets }),
-        }, 500, { "X-Correlation-ID": correlationId });
+        }, datasetsOk ? 200 : 503, { "X-Correlation-ID": correlationId });
       }
 
       // Admin circuit breaker reset
