@@ -83,20 +83,20 @@ async function handleScheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionC
     performCacheWarming(env, async (env: Env, r2Key: string) => {
       await loadGeo(env, r2Key);
     }, lookupRiding)
-      .then(() => console.log('[Cron] Cache warming completed successfully'))
-      .catch((error) => { console.error('[Cron] Cache warming failed:', error); throw error; }),
+      .then(() => console.log('[Cron] Cache warming completed successfully')),
 
     processWebhookEvents(env)
-      .then(() => console.log('[Cron] Webhook processing completed successfully'))
-      .catch((error) => { console.error('[Cron] Webhook processing failed:', error); throw error; }),
+      .then(() => console.log('[Cron] Webhook processing completed successfully')),
 
     cleanupWebhookData(env)
-      .then(() => console.log('[Cron] Webhook cleanup completed successfully'))
-      .catch((error) => { console.error('[Cron] Webhook cleanup failed:', error); throw error; }),
+      .then(() => console.log('[Cron] Webhook cleanup completed successfully')),
   ]);
 
-  // Log summary of any failures
+  // Log summary of any failures (each failure is logged exactly once here)
   const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  for (const failure of failures) {
+    console.error('[Cron] Scheduled task failed:', failure.reason);
+  }
   if (failures.length > 0) {
     console.error(`[Cron] ${failures.length}/3 scheduled tasks failed`);
   }
