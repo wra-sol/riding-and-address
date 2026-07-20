@@ -527,7 +527,7 @@ export default {
               features: 0, // Would need actual count
               lastSync: null, // Would need actual timestamp
               status: dbConfig.ENABLED ? "active" : "disabled"
-            }, 500, { "X-Correlation-ID": correlationId });
+            }, 200, { "X-Correlation-ID": correlationId });
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Failed to get database stats",
