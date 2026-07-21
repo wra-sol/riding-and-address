@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     pool: 'vmThreads',
+    fileParallelism: false,
     include: ['test/**/*.test.ts']
   }
 });
