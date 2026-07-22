@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { QueueManagerDO, QueueJob, BatchJob } from '../src/queue-manager';
+import { Env } from '../src/types';
 
 function createMockState(initialStorage?: Map<string, unknown>) {
   const storage = initialStorage ?? new Map<string, unknown>();
