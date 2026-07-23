@@ -69,6 +69,7 @@ import { QueueManagerDO } from './queue-manager';
 import { CircuitBreakerDO } from './circuit-breaker-do';
 import { createLandingPage, createApiReference, createOpenAPISpec } from './docs';
 import { getTimeoutConfig, getRetryConfig, TIME_CONSTANTS } from './config';
+import { buildCorsHeaders, handleCorsPreflight } from './cors';
 
 // Global state
 
@@ -302,30 +303,15 @@ export default {
     // Initialize webhook processing
     initializeWebhookProcessing(env);
     
+    const corsHeaders = buildCorsHeaders(request);
+    
     try {
       const url = new URL(request.url);
       const pathname = url.pathname;
       
-      // CORS configuration - can be customized per endpoint
-      const getCorsHeaders = (origin?: string | null): Record<string, string> => {
-        // Allow all origins by default, but can be restricted per endpoint
-        const allowedOrigin = origin || '*';
-        return {
-          'Access-Control-Allow-Origin': allowedOrigin,
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Google-API-Key, X-Correlation-ID, X-Request-ID',
-          'Access-Control-Max-Age': '86400',
-          'X-Correlation-ID': correlationId
-        };
-      };
-      
       // Handle CORS preflight
       if (request.method === 'OPTIONS') {
-        const origin = request.headers.get('Origin');
-        return new Response(null, {
-          status: 200,
-          headers: getCorsHeaders(origin)
-        });
+        return handleCorsPreflight(request);
       }
       
       // Handle landing page
@@ -342,7 +328,7 @@ export default {
       // Handle OpenAPI docs
       if (pathname === "/api/docs") {
         const baseUrl = `${url.protocol}//${url.host}`;
-        return jsonResponse(createOpenAPISpec(baseUrl));
+        return jsonResponse(createOpenAPISpec(baseUrl), 200, corsHeaders);
       }
 
       // Handle interactive API reference (Scalar)
@@ -367,7 +353,7 @@ export default {
           return jsonResponse({
             status: 'healthy',
             timestamp: Date.now(),
-          }, 200, { "X-Correlation-ID": correlationId });
+          }, 200, corsHeaders);
         }
 
         const metrics = getMetrics();
@@ -388,7 +374,7 @@ export default {
           cacheWarming: getCacheWarmingStatus(),
           datasets,
           ...(missingDatasets.length > 0 && { missingDatasets }),
-        }, datasetsOk ? 200 : 503, { "X-Correlation-ID": correlationId });
+        }, datasetsOk ? 200 : 503, corsHeaders);
       }
 
       // Admin circuit breaker reset
@@ -527,7 +513,7 @@ export default {
               features: 0, // Would need actual count
               lastSync: null, // Would need actual timestamp
               status: dbConfig.ENABLED ? "active" : "disabled"
-            }, 200, { "X-Correlation-ID": correlationId });
+            }, 200, corsHeaders);
           } catch (error) {
             return badRequest(
               error instanceof Error ? error.message : "Failed to get database stats",
@@ -1082,7 +1068,7 @@ export default {
           lookupRiding,
           correlationId,
           startTime,
-          getCorsHeaders,
+          corsHeaders,
           ctx
         );
       }
@@ -1093,7 +1079,7 @@ export default {
       recordTiming('totalLookupTime', Date.now() - startTime);
       console.error(`[${correlationId}] Unexpected error:`, err);
       const message = err instanceof Error ? err.message : "Unexpected error";
-      return jsonResponse({ error: message, code: "UNEXPECTED_ERROR", correlationId, timestamp: Date.now() }, 500, { "X-Correlation-ID": correlationId });
+      return jsonResponse({ error: message, code: "UNEXPECTED_ERROR", correlationId, timestamp: Date.now() }, 500, corsHeaders);
     }
   },
   

@@ -73,7 +73,7 @@ describe('handleLookupRequest', () => {
       vi.fn(),
       'corr-123',
       Date.now(),
-      () => ({ 'Access-Control-Allow-Origin': '*' })
+      { 'Access-Control-Allow-Origin': '*' }
     );
     expect(response.status).toBe(400);
     const body = await response.json() as { code: string };
@@ -101,7 +101,7 @@ describe('handleLookupRequest', () => {
       vi.fn(),
       'corr-456',
       Date.now(),
-      (origin) => ({ 'Access-Control-Allow-Origin': origin || '*' })
+      { 'Access-Control-Allow-Origin': 'http://localhost' }
     );
 
     expect(response.status).toBe(200);
@@ -127,7 +127,7 @@ describe('handleLookupRequest', () => {
       vi.fn(),
       'corr-789',
       Date.now(),
-      () => ({ 'Access-Control-Allow-Origin': '*' })
+      { 'Access-Control-Allow-Origin': '*' }
     );
 
     expect(response.status).toBe(500);
@@ -163,7 +163,7 @@ describe('handleLookupRequest', () => {
       vi.fn(),
       'corr-abc',
       Date.now(),
-      () => ({ 'Access-Control-Allow-Origin': '*' }),
+      { 'Access-Control-Allow-Origin': '*' },
       mockCtx
     );
 
@@ -195,7 +195,7 @@ describe('handleLookupRequest', () => {
       vi.fn(),
       'corr-def',
       Date.now(),
-      () => ({ 'Access-Control-Allow-Origin': '*' })
+      { 'Access-Control-Allow-Origin': '*' }
     );
 
     // The lookup path should be derived from /api/combined

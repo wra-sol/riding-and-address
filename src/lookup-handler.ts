@@ -18,7 +18,7 @@ export async function handleLookupRequest(
   lookupRiding: LookupRidingFn,
   correlationId: string,
   startTime: number,
-  getCorsHeaders: (origin?: string | null) => Record<string, string>,
+  corsHeaders: Record<string, string>,
   ctx?: ExecutionContext
 ): Promise<Response> {
   const { lookupPathname } = resolveLookupPath(pathname);
@@ -29,7 +29,6 @@ export async function handleLookupRequest(
   }
 
   const sanitizedQuery = validation.sanitized!;
-  const origin = request.headers.get('Origin');
 
   incrementMetric('lookupRequests');
 
@@ -70,7 +69,7 @@ export async function handleLookupRequest(
         headers: {
           'content-type': 'application/json; charset=UTF-8',
           'X-Cache-Status': expanded.cacheStatus,
-          ...getCorsHeaders(origin),
+          ...corsHeaders,
         },
       }
     );
